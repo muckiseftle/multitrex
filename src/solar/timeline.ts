@@ -48,18 +48,35 @@ export function buildTimeline(scene: SolarScene, journeyEl: HTMLElement) {
       Math.max(arrive + 1, sec.offsetTop + sec.offsetHeight - innerHeight * 0.45)
     );
 
-    // Mobile (Bottom-Sheet-Panels): Blick unter den Planeten -> er erscheint oben
+    // Mobile (Bottom-Sheet-Panels): Planet erscheint groß im oberen Drittel.
+    // Distanz aus dem HORIZONTALEN Sichtfeld berechnen — im Portrait-Viewport
+    // ist das der begrenzende Faktor, sonst wirken die Planeten winzig.
     const mobile = innerWidth < 700;
-    const camX = mobile ? 0 : v.x * 0.3; // Kamera leicht zur Planetenseite — Panel-Seite bleibt frei
-    const camZ = v.z + v.viewDist + (mobile ? 3 : 0);
-    const lookY = mobile ? -3.2 : 0;
+    const aspect = innerWidth / innerHeight;
+    const halfTanH = Math.tan((25 * Math.PI) / 180) * aspect; // halber horizontaler FOV
+    // Saturn: Ring (2,35 × Radius) darf seitlich anschneiden — bewusst cinematisch
+    const effRadius = v.id === 'saturn' ? (v.scale * 2.35) / 2.2 : v.scale;
+    const mobileDist = Math.max(7.5, effRadius / (0.7 * halfTanH));
+
+    // Mobil rückt die Kamera seitlich fast bis zum Planeten (x=±7), sonst
+    // vergrößert die Schräg-Distanz den Abstand und der Planet schrumpft wieder
+    const camX = mobile ? v.x * 0.75 : v.x * 0.3;
+    const sideGap = mobile ? v.x * 0.25 : 0;
+    const camZ =
+      v.z +
+      (mobile
+        ? Math.sqrt(Math.max(mobileDist * mobileDist - sideGap * sideGap, 30))
+        : v.viewDist);
+    // Blick proportional unter den Planeten -> er sitzt auf jedem Gerät gleich hoch
+    const lookY = mobile ? -0.17 * mobileDist : 0;
 
     // Anflug
     tl.to(cam, { x: camX, y: 0, z: camZ, duration: arrive - prevDepart }, prevDepart);
-    tl.to(look, { x: mobile ? v.x * 0.85 : v.x, y: lookY, z: v.z, duration: arrive - prevDepart }, prevDepart);
+    tl.to(look, { x: mobile ? v.x * 0.9 : v.x, y: lookY, z: v.z, duration: arrive - prevDepart }, prevDepart);
 
-    // Verweilen: leichter Orbit-Schwenk für Parallaxe
-    tl.to(cam, { x: camX + (v.x > 0 ? -2.4 : 2.4), z: camZ - 2, duration: depart - arrive }, arrive);
+    // Verweilen: leichter Orbit-Schwenk für Parallaxe (mobil dezenter, Kamera ist näher)
+    const drift = mobile ? 1.1 : 2.4;
+    tl.to(cam, { x: camX + (v.x > 0 ? -drift : drift), z: camZ - (mobile ? 1 : 2), duration: depart - arrive }, arrive);
 
     prevDepart = depart;
   }
