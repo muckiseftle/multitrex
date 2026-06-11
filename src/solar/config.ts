@@ -60,12 +60,24 @@ export const PLANET_VISUALS: PlanetVisual[] = JOURNEY_ORDER.map((id, i) => {
 });
 
 export type DeviceTier = 'high' | 'low';
+export type TextureSet = '4k' | '2k' | '1k';
 
-/** Heuristik für schwache Geräte — entscheidet Texturgröße, DPR, Geometrie */
+/**
+ * Heuristik für schwache Geräte — entscheidet DPR, Geometrie, Extras.
+ * Bewusst NICHT über pointer:coarse: moderne iPhones/iPads sind GPU-stark
+ * und sollen die volle Qualität bekommen.
+ */
 export function detectTier(): DeviceTier {
   const nav = navigator as Navigator & { deviceMemory?: number };
   const lowCores = (navigator.hardwareConcurrency ?? 8) <= 4;
   const lowMem = (nav.deviceMemory ?? 8) <= 4;
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  return lowCores || lowMem || coarse ? 'low' : 'high';
+  return lowCores || lowMem ? 'low' : 'high';
+}
+
+/** Texturauflösung passend zur tatsächlichen Render-Auflösung wählen */
+export function pickTextureSet(tier: DeviceTier): TextureSet {
+  const devicePx = Math.max(screen.width, screen.height) * Math.min(devicePixelRatio, 2);
+  if (tier === 'high' && devicePx > 1800) return '4k';
+  if (devicePx > 900) return '2k';
+  return '1k';
 }

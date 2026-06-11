@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { DeviceTier } from './config';
+import type { TextureSet } from './config';
 
 /**
  * Prioritäts-Lade-Queue für Planeten-Texturen.
@@ -17,10 +17,17 @@ export class TextureQueue {
   private base: string;
   private running = false;
 
-  constructor(tier: DeviceTier, onReady: (id: string, tex: THREE.Texture) => void) {
+  private anisotropy: number;
+
+  constructor(
+    set: TextureSet,
+    anisotropy: number,
+    onReady: (id: string, tex: THREE.Texture) => void
+  ) {
     // BASE_URL berücksichtigt den GitHub-Pages-Unterpfad (/multitrex/)
     const root = import.meta.env.BASE_URL.replace(/\/$/, '');
-    this.base = `${root}/textures/${tier === 'high' ? '2k' : '1k'}/`;
+    this.base = `${root}/textures/${set}/`;
+    this.anisotropy = anisotropy;
     this.onReady = onReady;
   }
 
@@ -51,7 +58,7 @@ export class TextureQueue {
     if (!p) {
       p = this.loader.loadAsync(`${this.base}${id}.webp`).then((tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = 4;
+        tex.anisotropy = this.anisotropy;
         this.loaded.set(id, tex);
         this.pending.delete(id);
         this.onReady(id, tex);

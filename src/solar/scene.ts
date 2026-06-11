@@ -3,6 +3,7 @@ import {
   PLANET_VISUALS,
   SUN_POS,
   SUN_RADIUS,
+  pickTextureSet,
   type DeviceTier,
 } from './config';
 import { TextureQueue } from './loader';
@@ -68,27 +69,62 @@ const SUN_FRAGMENT = /* glsl */ `
     vec3 col = mix(deep, hot, smoothstep(0.25, 0.75, g));
     col = mix(col, core, smoothstep(0.55, 0.95, g2 * g));
 
+    // feine Oberflächen-Granulation für mehr Schärfe aus der Nähe
+    float g3 = noise(vPos * 7.0 - vec3(0.0, uTime * 0.08, uTime * 0.05));
+    col *= 0.92 + 0.16 * g3;
+
     // Fresnel-Rim: Rand glüht weicher aus
     float fresnel = pow(1.0 - abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0))), 2.0);
     col += vec3(1.0, 0.6, 0.25) * fresnel * 0.9;
+
+    // feines Dithering gegen Banding in den weichen Verläufen
+    float dn = hash(vec3(gl_FragCoord.xy, uTime)) - 0.5;
+    col += dn * (1.5 / 255.0);
 
     gl_FragColor = vec4(col, 1.0);
   }
 `;
 
-/** radialer Glow als Canvas-Textur (Sprite) — ersetzt Bloom */
+/**
+ * Radialer Glow als Canvas-Textur (Sprite) — ersetzt Bloom.
+ * 1024px + viele Gradient-Stufen + Dither-Rauschen: das alte 256px-Sprite
+ * wurde auf ~50 Welteinheiten hochskaliert und zeigte sichtbares Banding.
+ */
 function makeGlowTexture(): THREE.Texture {
-  const size = 256;
+  const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d')!;
   const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, 'rgba(255, 200, 120, 0.85)');
-  grad.addColorStop(0.25, 'rgba(255, 150, 60, 0.4)');
-  grad.addColorStop(0.6, 'rgba(255, 110, 40, 0.12)');
-  grad.addColorStop(1, 'rgba(255, 100, 30, 0)');
+  // dichte Stops entlang einer weichen Falloff-Kurve gegen Banding
+  const stops: [number, number][] = [
+    [0.0, 0.85],
+    [0.1, 0.62],
+    [0.2, 0.44],
+    [0.3, 0.3],
+    [0.4, 0.2],
+    [0.5, 0.13],
+    [0.6, 0.08],
+    [0.7, 0.045],
+    [0.8, 0.02],
+    [0.9, 0.007],
+    [1.0, 0.0],
+  ];
+  for (const [pos, a] of stops) {
+    const warm = Math.min(1, pos * 1.6); // innen gelblich, außen orange
+    grad.addColorStop(pos, `rgba(255, ${Math.round(200 - warm * 90)}, ${Math.round(120 - warm * 85)}, ${a})`);
+  }
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
+
+  // ±1,5/255 Rauschen auf den Alphakanal — bricht die letzten Banding-Ringe auf
+  const img = ctx.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let i = 3; i < d.length; i += 4) {
+    if (d[i]! > 0 && d[i]! < 250) d[i] = Math.max(0, Math.min(255, d[i]! + (Math.random() * 3 - 1.5)));
+  }
+  ctx.putImageData(img, 0, 0);
+
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -118,11 +154,11 @@ export class SolarScene {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: tier === 'high',
+      antialias: true, // MSAA ist auf modernen GPUs günstig — Kanten immer glatt
       powerPreference: 'high-performance',
     });
     this.renderer.setClearColor(0x05070f, 1);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, tier === 'high' ? 2 : 1.5));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, tier === 'high' ? 2 : 1.75));
     this.renderer.setSize(innerWidth, innerHeight);
 
     this.camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 600);
@@ -142,7 +178,7 @@ export class SolarScene {
   /* ---------------- Aufbau ---------------- */
 
   private buildSun(): THREE.ShaderMaterial {
-    const seg = this.tier === 'high' ? 96 : 48;
+    const seg = this.tier === 'high' ? 128 : 64;
     const mat = new THREE.ShaderMaterial({
       vertexShader: SUN_VERTEX,
       fragmentShader: SUN_FRAGMENT,
@@ -228,17 +264,22 @@ export class SolarScene {
   }
 
   private buildPlanets(tier: DeviceTier): TextureQueue {
-    const seg = tier === 'high' ? 96 : 48;
+    const seg = tier === 'high' ? 128 : 64;
     // EINE Geometrie für alle Planeten — nur Material/Scale variiert
     const sphere = new THREE.SphereGeometry(1, seg, seg / 2);
 
-    const queue = new TextureQueue(tier, (id, tex) => this.applyTexture(id, tex));
+    const queue = new TextureQueue(
+      pickTextureSet(tier),
+      this.renderer.capabilities.getMaxAnisotropy(),
+      (id, tex) => this.applyTexture(id, tex)
+    );
 
     for (const v of PLANET_VISUALS) {
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(v.tint),
         roughness: 0.95,
         metalness: 0,
+        dithering: true, // bricht Banding in den Licht-Verläufen auf der Kugel
       });
       const mesh = new THREE.Mesh(sphere, mat);
       mesh.position.set(v.x, 0, v.z);
@@ -258,7 +299,7 @@ export class SolarScene {
   }
 
   private addSaturnRing(planet: THREE.Mesh, scale: number, queue: TextureQueue) {
-    const geo = new THREE.RingGeometry(1.35, 2.35, 96, 1);
+    const geo = new THREE.RingGeometry(1.35, 2.35, 128, 1);
     // UVs radial mappen, damit die Ring-Textur (Streifen) richtig liegt
     const pos = geo.attributes.position;
     const uv = geo.attributes.uv;
@@ -272,6 +313,7 @@ export class SolarScene {
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.9,
+      dithering: true,
     });
     const ring = new THREE.Mesh(geo, mat);
     ring.rotation.x = Math.PI / 2.25;
@@ -292,8 +334,9 @@ export class SolarScene {
       opacity: 0,
       depthWrite: false,
       roughness: 1,
+      dithering: true,
     });
-    const clouds = new THREE.Mesh(new THREE.SphereGeometry(1.02, 64, 32), mat);
+    const clouds = new THREE.Mesh(new THREE.SphereGeometry(1.02, 96, 48), mat);
     planet.add(clouds);
     this.clouds = clouds;
 

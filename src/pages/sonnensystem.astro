@@ -175,14 +175,41 @@ const fmt = new Intl.NumberFormat('de-DE');
   }
 
   /* CSS-Sonnenglühen: sofort da, kein JS nötig — LCP-sicher.
-     Wird vom Canvas überblendet, sobald WebGL bereit ist. */
+     Wird vom Canvas überblendet, sobald WebGL bereit ist.
+     Viele Zwischenstops + Noise-Overlay gegen Gradient-Banding. */
   .stage__glow {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 118%, rgb(255 220 160 / 0.95) 0%, rgb(255 180 92 / 0.55) 18%, rgb(200 110 50 / 0.22) 38%, transparent 62%),
-      radial-gradient(circle at 50% 130%, rgb(255 244 220 / 1) 0%, transparent 30%);
+      radial-gradient(
+        circle at 50% 118%,
+        rgb(255 220 160 / 0.95) 0%,
+        rgb(255 200 120 / 0.72) 10%,
+        rgb(255 180 92 / 0.55) 18%,
+        rgb(230 145 70 / 0.37) 28%,
+        rgb(200 110 50 / 0.22) 38%,
+        rgb(160 85 40 / 0.12) 48%,
+        rgb(110 55 30 / 0.05) 56%,
+        transparent 62%
+      ),
+      radial-gradient(
+        circle at 50% 130%,
+        rgb(255 244 220 / 1) 0%,
+        rgb(255 238 200 / 0.6) 18%,
+        transparent 30%
+      );
     transition: opacity 1.2s ease;
+  }
+
+  /* feines Filmkorn bricht die Banding-Ringe des Gradients auf */
+  .stage__glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    pointer-events: none;
   }
 
   .stage__canvas {
