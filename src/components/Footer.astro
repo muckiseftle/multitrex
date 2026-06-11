@@ -1,6 +1,7 @@
 ---
 import OrbitMark from './OrbitMark.astro';
 
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
 const year = new Date().getFullYear();
 ---
 
@@ -8,7 +9,7 @@ const year = new Date().getFullYear();
   <div class="container">
     <div class="footer__grid">
       <div class="footer__brand">
-        <a href="/" class="footer__logo" aria-label="Multitrex — Startseite">
+        <a href={base + '/'} class="footer__logo" aria-label="Multitrex — Startseite">
           <OrbitMark size={26} />
           <span>MULTITREX</span>
         </a>
@@ -21,18 +22,18 @@ const year = new Date().getFullYear();
       <nav class="footer__nav" aria-label="Footer-Navigation">
         <p class="label label--accent">Navigation</p>
         <ul>
-          <li><a href="/sonnensystem/">Sonnensystem</a></li>
-          <li><a href="/portfolio/">Portfolio</a></li>
-          <li><a href="/ueber-mich/">Über mich</a></li>
-          <li><a href="/kontakt/">Kontakt</a></li>
+          <li><a href={`${base}/sonnensystem/`}>Sonnensystem</a></li>
+          <li><a href={`${base}/portfolio/`}>Portfolio</a></li>
+          <li><a href={`${base}/ueber-mich/`}>Über mich</a></li>
+          <li><a href={`${base}/kontakt/`}>Kontakt</a></li>
         </ul>
       </nav>
 
       <nav class="footer__nav" aria-label="Rechtliches">
         <p class="label label--accent">Rechtliches</p>
         <ul>
-          <li><a href="/impressum/">Impressum</a></li>
-          <li><a href="/datenschutz/">Datenschutz</a></li>
+          <li><a href={`${base}/impressum/`}>Impressum</a></li>
+          <li><a href={`${base}/datenschutz/`}>Datenschutz</a></li>
         </ul>
       </nav>
     </div>

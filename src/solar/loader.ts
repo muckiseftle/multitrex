@@ -18,7 +18,9 @@ export class TextureQueue {
   private running = false;
 
   constructor(tier: DeviceTier, onReady: (id: string, tex: THREE.Texture) => void) {
-    this.base = `/textures/${tier === 'high' ? '2k' : '1k'}/`;
+    // BASE_URL berücksichtigt den GitHub-Pages-Unterpfad (/multitrex/)
+    const root = import.meta.env.BASE_URL.replace(/\/$/, '');
+    this.base = `${root}/textures/${tier === 'high' ? '2k' : '1k'}/`;
     this.onReady = onReady;
   }
 

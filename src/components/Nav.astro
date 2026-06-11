@@ -1,11 +1,14 @@
 ---
 import OrbitMark from './OrbitMark.astro';
 
+// Basis-Pfad ('' lokal/eigene Domain, '/multitrex' auf GitHub Pages)
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
+
 const links = [
-  { href: '/sonnensystem/', label: 'Sonnensystem' },
-  { href: '/portfolio/', label: 'Portfolio' },
-  { href: '/ueber-mich/', label: 'Über mich' },
-  { href: '/kontakt/', label: 'Kontakt' },
+  { href: `${base}/sonnensystem/`, label: 'Sonnensystem' },
+  { href: `${base}/portfolio/`, label: 'Portfolio' },
+  { href: `${base}/ueber-mich/`, label: 'Über mich' },
+  { href: `${base}/kontakt/`, label: 'Kontakt' },
 ];
 
 const current = Astro.url.pathname;
@@ -13,7 +16,7 @@ const current = Astro.url.pathname;
 
 <header class="nav-wrap">
   <nav class="nav container" aria-label="Hauptnavigation">
-    <a href="/" class="brand" aria-label="Multitrex — Startseite">
+    <a href={base + '/'} class="brand" aria-label="Multitrex — Startseite">
       <OrbitMark size={30} />
       <span class="brand__name">MULTITREX</span>
       <span class="brand__sub label">Astrofotografie · Allgäu</span>

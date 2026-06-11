@@ -10,9 +10,10 @@ interface Props {
 }
 const { entry, wide = false, loading = 'lazy' } = Astro.props;
 const { title, subtitle, image, object, constellation, distance } = entry.data;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
 ---
 
-<a href={`/portfolio/${entry.id}/`} class:list={['card', { 'card--wide': wide }]}>
+<a href={`${base}/portfolio/${entry.id}/`} class:list={['card', { 'card--wide': wide }]}>
   <figure class="card__media">
     <Image
       src={image}

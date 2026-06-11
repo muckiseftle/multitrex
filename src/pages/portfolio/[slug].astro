@@ -4,6 +4,8 @@ import { Image } from 'astro:assets';
 import Base from '../../layouts/Base.astro';
 import DataHud from '../../components/DataHud.astro';
 
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
+
 export async function getStaticPaths() {
   const entries = await getCollection('portfolio');
   return entries.map((entry) => ({
@@ -31,7 +33,7 @@ const hudItems = [
 >
   <article class="detail container">
     <nav class="detail__back" aria-label="Zurück">
-      <a href="/portfolio/" class="label">← Zurück zum Portfolio</a>
+      <a href={`${base}/portfolio/`} class="label">← Zurück zum Portfolio</a>
     </nav>
 
     <header class="detail__head">

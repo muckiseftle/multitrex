@@ -7,6 +7,8 @@ import GalleryCard from '../components/GalleryCard.astro';
 import heroImage from '../assets/photos/m42-orionnebel.jpg';
 import portraitImage from '../assets/photos/teleskop-milchstrasse.jpg';
 
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
+
 const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort(
   (a, b) => a.data.order - b.data.order
 );
@@ -36,8 +38,8 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
         Himmel Deutschlands.
       </p>
       <div class="hero__actions">
-        <a href="/sonnensystem/" class="btn">Zur Sonnensystem-Reise</a>
-        <a href="/portfolio/" class="btn btn--ghost">Portfolio ansehen</a>
+        <a href={`${base}/sonnensystem/`} class="btn">Zur Sonnensystem-Reise</a>
+        <a href={`${base}/portfolio/`} class="btn btn--ghost">Portfolio ansehen</a>
       </div>
     </div>
     <p class="hero__credit label">M 42 · Großer Orionnebel · ≈ 1.344 Lichtjahre</p>
@@ -54,7 +56,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
           Eine Reise durch alle acht Planeten — in Echtzeit-3D, gesteuert
           allein durch dein Scrollen.
         </p>
-        <a href="/sonnensystem/" class="btn">Reise starten</a>
+        <a href={`${base}/sonnensystem/`} class="btn">Reise starten</a>
       </div>
 
       <!-- animierter Mini-Orbit, reine Vektorgrafik -->
@@ -90,7 +92,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
         ))}
       </div>
       <div class="highlights__more">
-        <a href="/portfolio/" class="btn btn--ghost">Alle Aufnahmen</a>
+        <a href={`${base}/portfolio/`} class="btn btn--ghost">Alle Aufnahmen</a>
       </div>
     </div>
   </section>
@@ -114,7 +116,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
           an Belichtungszeit, gesammelt in klaren Nächten — für Bilder von
           Objekten, die Millionen Lichtjahre entfernt sind.
         </p>
-        <a href="/ueber-mich/" class="btn btn--ghost">Mehr über mich</a>
+        <a href={`${base}/ueber-mich/`} class="btn btn--ghost">Mehr über mich</a>
       </div>
     </div>
   </section>
