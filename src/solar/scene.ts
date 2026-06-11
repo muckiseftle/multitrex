@@ -107,6 +107,7 @@ export class SolarScene {
   readonly lookTarget = new THREE.Vector3(0, 0, -40);
 
   private sunMaterial: THREE.ShaderMaterial;
+  private starMaterial?: THREE.ShaderMaterial;
   private sunLight: THREE.PointLight;
   private clouds?: THREE.Mesh;
   private clock = new THREE.Clock();
@@ -168,6 +169,8 @@ export class SolarScene {
   private buildStars() {
     const count = this.tier === 'high' ? 4000 : 1800;
     const positions = new Float32Array(count * 3);
+    const phases = new Float32Array(count);
+    const sizes = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       // Sterne auf einer großen Kugelschale rund um die Reisestrecke
       const r = 220 + Math.random() * 160;
@@ -176,18 +179,52 @@ export class SolarScene {
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi) - 180; // entlang der Strecke verschoben
+      phases[i] = Math.random();
+      sizes[i] = 0.8 + Math.random() * 1.6;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({
-      color: 0xe8edf7,
-      size: 0.7,
-      sizeAttenuation: true,
+    geo.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+    // Funkeln im Vertex-Shader: jeder Stern pulsiert mit eigener Phase/Frequenz
+    this.starMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uPixelRatio: { value: this.renderer.getPixelRatio() },
+      },
+      vertexShader: /* glsl */ `
+        attribute float aPhase;
+        attribute float aSize;
+        uniform float uTime;
+        uniform float uPixelRatio;
+        varying float vAlpha;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          float dist = max(-mv.z, 0.001);
+          // Größe clampen: sehr nahe Sterne würden sonst zu Riesen-Punkten
+          // explodieren und die GPU mit Overdraw lahmlegen
+          gl_PointSize = clamp(aSize * uPixelRatio * (160.0 / dist), 0.0, 7.0 * uPixelRatio);
+          float tw = sin(uTime * (0.5 + aPhase * 1.7) + aPhase * 6.2831);
+          vAlpha = (0.35 + 0.65 * (0.5 + 0.5 * tw))
+            // nahe Sterne sanft ausblenden statt als Scheiben vorbeifliegen
+            * smoothstep(20.0, 60.0, dist);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float m = smoothstep(0.5, 0.12, d);
+          gl_FragColor = vec4(vec3(0.91, 0.93, 0.97), vAlpha * m);
+        }
+      `,
       transparent: true,
-      opacity: 0.85,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
-    this.scene.add(new THREE.Points(geo, mat));
+    this.scene.add(new THREE.Points(geo, this.starMaterial));
   }
 
   private buildPlanets(tier: DeviceTier): TextureQueue {
@@ -295,6 +332,7 @@ export class SolarScene {
   update() {
     const t = this.clock.getElapsedTime();
     this.sunMaterial.uniforms.uTime.value = t;
+    if (this.starMaterial) this.starMaterial.uniforms.uTime.value = t;
 
     // langsame Eigenrotation aller sichtbaren Planeten
     for (const mesh of this.planets.values()) {

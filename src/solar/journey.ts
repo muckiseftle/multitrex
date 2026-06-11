@@ -17,6 +17,8 @@ export function initJourney() {
   if (!journey) return;
 
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  initRail(reducedMotion);
+
   if (reducedMotion || !supportsWebGL()) {
     // statischer Pfad: nichts verstecken, nichts animieren — Inhalt steht ja im HTML
     return;
@@ -24,6 +26,50 @@ export function initJourney() {
 
   initOverlays();
   void init3D(journey);
+}
+
+/* ---------------- Sprungleiste: aktive Station + sanfte Sprünge ---------------- */
+
+/** Lenis-Instanz, sobald die 3D-Initialisierung sie erzeugt hat */
+let lenisRef: { scrollTo: (target: HTMLElement, opts?: object) => void } | null = null;
+
+function initRail(reducedMotion: boolean) {
+  const items = [...document.querySelectorAll<HTMLAnchorElement>('[data-rail]')];
+  if (items.length === 0) return;
+
+  // Klick: ohne Scrollen zur Station springen (smooth, außer bei reduced motion)
+  for (const item of items) {
+    item.addEventListener('click', (e) => {
+      const target = document.getElementById(item.dataset.rail ?? '');
+      if (!target) return;
+      e.preventDefault();
+      // Ziel: Sektionsmitte im Viewport — dort steht das Panel, dort verweilt die Kamera
+      const y = target.offsetTop + target.offsetHeight / 2 - innerHeight / 2;
+      if (lenisRef && !reducedMotion) {
+        lenisRef.scrollTo(target, { offset: target.offsetHeight / 2 - innerHeight / 2, duration: 1.8 });
+      } else {
+        scrollTo({ top: y, behavior: reducedMotion ? 'auto' : 'smooth' });
+      }
+      history.replaceState(null, '', `#${item.dataset.rail}`);
+    });
+  }
+
+  // Aktive Station: Sektion, deren Mitte im mittleren Viewport-Band liegt
+  const byId = new Map(items.map((i) => [i.dataset.rail ?? '', i]));
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        for (const i of items) delete i.dataset.active;
+        byId.get(entry.target.id)!.dataset.active = '';
+      }
+    },
+    { rootMargin: '-45% 0px -45% 0px' }
+  );
+  for (const id of byId.keys()) {
+    const sec = document.getElementById(id);
+    if (sec) observer.observe(sec);
+  }
 }
 
 function supportsWebGL(): boolean {
@@ -86,6 +132,7 @@ async function init3D(journey: HTMLElement) {
 
   /* Lenis <-> ScrollTrigger Standard-Verdrahtung */
   const lenis = new Lenis({ lerp: 0.12 });
+  lenisRef = lenis;
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);

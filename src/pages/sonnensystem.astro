@@ -27,6 +27,32 @@ const fmt = new Intl.NumberFormat('de-DE');
       <canvas id="solar-canvas" class="stage__canvas"></canvas>
     </div>
 
+    <!-- Sprungleiste: alle Stationen in Reihe, klickbar -->
+    <nav class="rail" aria-label="Direkt zu einem Planeten springen">
+      <a
+        href="#sonne"
+        class="rail__item"
+        data-rail="sonne"
+        style="--dot-color: var(--color-accent-warm); --dot-size: 16px"
+      >
+        <span class="rail__label">Sonne</span>
+        <span class="rail__dot" aria-hidden="true"></span>
+      </a>
+      {
+        planets.map((p) => (
+          <a
+            href={`#${p.id}`}
+            class="rail__item"
+            data-rail={p.id}
+            style={`--dot-color: ${p.tint}; --dot-size: ${(6 + Math.pow(p.radiusEarths, 0.4) * 4).toFixed(1)}px`}
+          >
+            <span class="rail__label">{p.name}</span>
+            <span class="rail__dot" aria-hidden="true" />
+          </a>
+        ))
+      }
+    </nav>
+
     <!-- ============ SEKTION: SONNE (Hero / LCP) ============ -->
     <section class="sec sec--sun" id="sonne" data-body="sonne">
       <div class="sec__inner container">
@@ -133,6 +159,8 @@ const fmt = new Intl.NumberFormat('de-DE');
 
   #journey {
     position: relative;
+    /* Sicherheitsnetz: nichts darf horizontales Scrollen auslösen */
+    overflow-x: clip;
   }
 
   /* ---------- Stage: Canvas + CSS-Glow ---------- */
@@ -172,6 +200,109 @@ const fmt = new Intl.NumberFormat('de-DE');
     opacity: 0;
   }
 
+  /* ---------- Sprungleiste ---------- */
+  .rail {
+    position: fixed;
+    right: clamp(10px, 2.2vw, 28px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: var(--z-nav);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 14px;
+    /* feine Verbindungslinie hinter den Punkten */
+    padding: 10px 0;
+  }
+
+  .rail::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(var(--rail-line-offset, 8px));
+    width: 1px;
+    background: linear-gradient(transparent, var(--color-space-700) 12%, var(--color-space-700) 88%, transparent);
+    pointer-events: none;
+  }
+
+  .rail__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 18px;
+    color: var(--color-star-400);
+  }
+
+  .rail__dot {
+    position: relative;
+    width: var(--dot-size, 10px);
+    height: var(--dot-size, 10px);
+    margin-right: calc((17px - var(--dot-size, 10px)) / 2);
+    border-radius: 50%;
+    background: var(--dot-color, var(--color-accent));
+    opacity: 0.45;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  .rail__label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    opacity: 0;
+    transform: translateX(6px);
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+    pointer-events: none;
+    background: rgb(5 7 15 / 0.8);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: var(--border-fine);
+  }
+
+  .rail__item:hover .rail__dot {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+
+  .rail__item:hover .rail__label,
+  .rail__item:focus-visible .rail__label,
+  .rail__item[data-active] .rail__label {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .rail__item[data-active] .rail__dot {
+    opacity: 1;
+    box-shadow: 0 0 12px var(--dot-color, var(--color-accent));
+  }
+
+  @media (max-width: 700px) {
+    .rail {
+      right: 6px;
+      gap: 11px;
+    }
+
+    .rail__dot {
+      /* auf dem Handy kompakter, aber Touch-Ziel bleibt die ganze Zeile */
+      transform: scale(0.8);
+    }
+
+    /* Labels brauchen Platz — mobil nur für die aktive Station */
+    .rail__item:hover .rail__label {
+      opacity: 0;
+    }
+
+    .rail__item[data-active] .rail__label {
+      opacity: 1;
+    }
+  }
+
   /* ---------- Sektionen ---------- */
   .sec {
     position: relative;
@@ -188,7 +319,8 @@ const fmt = new Intl.NumberFormat('de-DE');
   }
 
   .sec--sun__title {
-    font-size: var(--text-hero);
+    /* „Sonnensystem" ist 12 Zeichen — muss auch auf 320px-Geräten passen */
+    font-size: clamp(2.1rem, 0.4rem + 9.5vw, 7rem);
     margin: var(--space-3) 0;
   }
 
