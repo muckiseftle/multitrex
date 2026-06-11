@@ -1,0 +1,54 @@
+---
+/**
+ * Daten-HUD: Mono-Label + Wert in feiner Linien-Optik —
+ * das wiederkehrende Markenelement für technische Daten.
+ */
+interface Props {
+  items: { label: string; value: string }[];
+  columns?: number;
+}
+const { items, columns = 2 } = Astro.props;
+---
+
+<dl class="hud" style={`--hud-cols: ${columns}`}>
+  {
+    items.map((item) => (
+      <div class="hud__cell">
+        <dt class="label">{item.label}</dt>
+        <dd>{item.value}</dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(var(--hud-cols, 2), 1fr);
+    gap: 1px;
+    background: var(--color-space-700);
+    border: var(--border-fine);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin: 0;
+  }
+
+  .hud__cell {
+    background: var(--color-space-900);
+    padding: var(--space-3);
+  }
+
+  .hud__cell dd {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    color: var(--color-star-100);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 520px) {
+    .hud {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

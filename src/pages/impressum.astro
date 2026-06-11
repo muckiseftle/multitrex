@@ -1,0 +1,54 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Impressum — Multitrex Astrofotografie"
+  description="Impressum der Website astrofotografie-allgaeu.de von Merlin Gail."
+>
+  <section class="legal container">
+    <p class="label label--accent">Rechtliches</p>
+    <h1>Impressum</h1>
+
+    <h2>Angaben gemäß § 5 DDG</h2>
+    <p>
+      Merlin Gail<br />
+      Fleschützer Straße 4<br />
+      87490 Börwang
+    </p>
+
+    <h2>Kontakt</h2>
+    <p>
+      E-Mail: <a href="mailto:info@multitrex.de">info@multitrex.de</a>
+    </p>
+
+    <h2>Redaktionell verantwortlich</h2>
+    <p>Merlin Gail (Anschrift wie oben)</p>
+
+    <h2>Bildnachweise</h2>
+    <p>
+      Alle Astrofotografien: © Merlin Gail.<br />
+      Planeten-Texturen der Sonnensystem-Seite:
+      <a href="https://www.solarsystemscope.com/textures/" rel="noopener" target="_blank">Solar System Scope</a>
+      (Lizenz: CC BY 4.0).
+    </p>
+
+    <p class="label">Quelle der Erstfassung: e-recht24.de</p>
+  </section>
+</Base>
+
+<style>
+  .legal {
+    padding: var(--space-6) 0 var(--space-5);
+    max-width: 46rem;
+  }
+
+  .legal h1 {
+    margin-top: var(--space-2);
+  }
+
+  .legal h2 {
+    font-size: var(--text-lg);
+    margin-top: var(--space-5);
+  }
+</style>

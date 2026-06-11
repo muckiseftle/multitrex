@@ -1,0 +1,68 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import GalleryCard from '../../components/GalleryCard.astro';
+
+const entries = (await getCollection('portfolio')).sort(
+  (a, b) => a.data.order - b.data.order
+);
+const [lead, ...rest] = entries;
+---
+
+<Base
+  title="Portfolio — Multitrex Astrofotografie"
+  description="Astrofotografien aus dem Allgäu: Orionnebel, Leo-Triplett, Whirlpool-Galaxie, Mineralmond und mehr — aufgenommen von Merlin Gail."
+>
+  <section class="gallery container">
+    <header class="gallery__head">
+      <p class="label label--accent">Portfolio</p>
+      <h1>Aufnahmen aus der Allgäuer Nacht.</h1>
+      <p class="gallery__lead">
+        Jedes dieser Bilder ist das Ergebnis vieler Stunden Belichtungszeit,
+        gesammelt über klare Nächte hinweg — und von Licht, das teils Millionen
+        Jahre zu uns unterwegs war.
+      </p>
+    </header>
+
+    {lead && (
+      <div class="gallery__lead-card">
+        <GalleryCard entry={lead} wide loading="eager" />
+      </div>
+    )}
+
+    <div class="gallery__grid">
+      {rest.map((entry) => (
+        <GalleryCard entry={entry} />
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .gallery {
+    padding: var(--space-6) 0 var(--space-5);
+  }
+
+  .gallery__head {
+    max-width: 60ch;
+    margin-bottom: var(--space-6);
+  }
+
+  .gallery__head h1 {
+    margin-top: var(--space-2);
+  }
+
+  .gallery__lead {
+    color: var(--color-star-400);
+  }
+
+  .gallery__lead-card {
+    margin-bottom: var(--space-4);
+  }
+
+  .gallery__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    gap: var(--space-4);
+  }
+</style>

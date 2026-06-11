@@ -1,0 +1,45 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="404 — Verloren im Weltall | Multitrex"
+  description="Diese Seite existiert nicht — zurück zur Erde."
+>
+  <section class="lost container">
+    <p class="label label--accent">Fehler 404</p>
+    <h1>Verloren im Weltall.</h1>
+    <p class="lost__text">
+      Diese Seite liegt außerhalb des kartierten Bereichs. Vielleicht wurde
+      sie von einem Schwarzen Loch verschluckt — oder die Adresse stimmt
+      einfach nicht.
+    </p>
+    <div class="lost__actions">
+      <a href="/" class="btn">Zurück zur Erde</a>
+      <a href="/sonnensystem/" class="btn btn--ghost">Sonnensystem erkunden</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .lost {
+    min-height: 55svh;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    padding: var(--space-7) 0;
+  }
+
+  .lost__text {
+    color: var(--color-star-400);
+    margin-inline: auto;
+    margin-bottom: var(--space-5);
+  }
+
+  .lost__actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+</style>

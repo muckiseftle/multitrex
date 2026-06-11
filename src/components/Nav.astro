@@ -1,0 +1,197 @@
+---
+import OrbitMark from './OrbitMark.astro';
+
+const links = [
+  { href: '/sonnensystem/', label: 'Sonnensystem' },
+  { href: '/portfolio/', label: 'Portfolio' },
+  { href: '/ueber-mich/', label: 'Über mich' },
+  { href: '/kontakt/', label: 'Kontakt' },
+];
+
+const current = Astro.url.pathname;
+---
+
+<header class="nav-wrap">
+  <nav class="nav container" aria-label="Hauptnavigation">
+    <a href="/" class="brand" aria-label="Multitrex — Startseite">
+      <OrbitMark size={30} />
+      <span class="brand__name">MULTITREX</span>
+      <span class="brand__sub label">Astrofotografie · Allgäu</span>
+    </a>
+
+    <button
+      class="nav__toggle"
+      aria-expanded="false"
+      aria-controls="nav-menu"
+      aria-label="Menü öffnen"
+    >
+      <span class="nav__toggle-bar"></span>
+      <span class="nav__toggle-bar"></span>
+    </button>
+
+    <ul class="nav__menu" id="nav-menu">
+      {
+        links.map((l) => (
+          <li>
+            <a
+              href={l.href}
+              class="nav__link"
+              aria-current={current.startsWith(l.href) ? 'page' : undefined}
+            >
+              {l.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .nav-wrap {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: var(--z-nav);
+    background: rgb(5 7 15 / 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgb(27 37 64 / 0.6);
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    height: 4.25rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    color: var(--color-star-100);
+  }
+
+  .brand :global(svg) {
+    align-self: center;
+  }
+
+  .brand__name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: 0.18em;
+  }
+
+  .brand__sub {
+    font-size: 0.6rem;
+  }
+
+  .nav__menu {
+    display: flex;
+    gap: var(--space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav__link {
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--color-star-400);
+    padding: 0.4em 0;
+    border-bottom: 1px solid transparent;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .nav__link:hover {
+    color: var(--color-accent);
+  }
+
+  .nav__link[aria-current='page'] {
+    color: var(--color-star-100);
+    border-bottom-color: var(--color-accent);
+  }
+
+  .nav__toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .nav__toggle-bar {
+    display: block;
+    height: 1.5px;
+    width: 100%;
+    background: var(--color-star-100);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  @media (max-width: 760px) {
+    .brand__sub {
+      display: none;
+    }
+
+    .nav__toggle {
+      display: flex;
+    }
+
+    .nav__menu {
+      position: fixed;
+      top: 4.25rem;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      gap: 0;
+      background: rgb(5 7 15 / 0.97);
+      border-bottom: var(--border-fine);
+      padding: var(--space-3) var(--container-pad) var(--space-4);
+      transform: translateY(-115%);
+      transition: transform var(--dur-base) var(--ease-out);
+      visibility: hidden;
+    }
+
+    .nav-wrap[data-open] .nav__menu {
+      transform: translateY(0);
+      visibility: visible;
+    }
+
+    .nav-wrap[data-open] .nav__toggle-bar:first-child {
+      transform: translateY(4.25px) rotate(45deg);
+    }
+
+    .nav-wrap[data-open] .nav__toggle-bar:last-child {
+      transform: translateY(-4.25px) rotate(-45deg);
+    }
+
+    .nav__link {
+      display: block;
+      padding: 0.9em 0;
+      border-bottom: 1px solid rgb(27 37 64 / 0.5);
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  const wrap = document.querySelector('.nav-wrap');
+  const toggle = wrap?.querySelector('.nav__toggle');
+  toggle?.addEventListener('click', () => {
+    const open = wrap!.toggleAttribute('data-open');
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Menü schließen' : 'Menü öffnen');
+  });
+</script>

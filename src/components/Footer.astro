@@ -1,0 +1,111 @@
+---
+import OrbitMark from './OrbitMark.astro';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a href="/" class="footer__logo" aria-label="Multitrex — Startseite">
+          <OrbitMark size={26} />
+          <span>MULTITREX</span>
+        </a>
+        <p class="footer__claim">
+          Astrofotografie aus dem Allgäu — wo die Nächte noch dunkel sind.
+        </p>
+        <p class="label">47.7° N · 10.3° O · 730 m ü. NN</p>
+      </div>
+
+      <nav class="footer__nav" aria-label="Footer-Navigation">
+        <p class="label label--accent">Navigation</p>
+        <ul>
+          <li><a href="/sonnensystem/">Sonnensystem</a></li>
+          <li><a href="/portfolio/">Portfolio</a></li>
+          <li><a href="/ueber-mich/">Über mich</a></li>
+          <li><a href="/kontakt/">Kontakt</a></li>
+        </ul>
+      </nav>
+
+      <nav class="footer__nav" aria-label="Rechtliches">
+        <p class="label label--accent">Rechtliches</p>
+        <ul>
+          <li><a href="/impressum/">Impressum</a></li>
+          <li><a href="/datenschutz/">Datenschutz</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="footer__bottom">
+      <p class="label">© {year} Merlin Gail · Multitrex</p>
+      <p class="label">Planeten-Texturen: Solar System Scope (CC BY 4.0)</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    z-index: var(--z-content);
+    border-top: var(--border-fine);
+    background: var(--color-space-900);
+    padding: var(--space-6) 0 var(--space-4);
+    margin-top: var(--space-7);
+  }
+
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--space-5);
+  }
+
+  .footer__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--color-star-100);
+  }
+
+  .footer__claim {
+    color: var(--color-star-400);
+    margin: var(--space-3) 0 var(--space-2);
+    max-width: 32ch;
+  }
+
+  .footer__nav ul {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .footer__nav a {
+    color: var(--color-star-400);
+  }
+
+  .footer__nav a:hover {
+    color: var(--color-accent);
+  }
+
+  .footer__bottom {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    border-top: 1px solid rgb(27 37 64 / 0.5);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+  }
+
+  @media (max-width: 700px) {
+    .footer__grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+  }
+</style>

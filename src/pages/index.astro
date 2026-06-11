@@ -1,0 +1,293 @@
+---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import GalleryCard from '../components/GalleryCard.astro';
+
+import heroImage from '../assets/photos/m42-orionnebel.jpg';
+import portraitImage from '../assets/photos/teleskop-milchstrasse.jpg';
+
+const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort(
+  (a, b) => a.data.order - b.data.order
+);
+---
+
+<Base
+  title="Multitrex — Astrofotografie im Allgäu"
+  description="Astrofotografie von Merlin Gail aus dem Allgäu: Galaxien, Nebel und Planeten, fotografiert unter einem der dunkelsten Himmel Deutschlands. Mit interaktiver 3D-Reise durch unser Sonnensystem."
+>
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <Image
+      src={heroImage}
+      alt="Der Große Orionnebel M42, aufgenommen im Allgäu"
+      class="hero__bg"
+      width={1920}
+      loading="eager"
+      fetchpriority="high"
+      quality={70}
+    />
+    <div class="hero__scrim" aria-hidden="true"></div>
+    <div class="hero__content container">
+      <p class="label label--accent hero__kicker">47.7° N · 10.3° O — Allgäu bei Nacht</p>
+      <h1 class="hero__title">Das Universum,<br />fotografiert vor der Haustür.</h1>
+      <p class="hero__lead">
+        Galaxien, Nebel und Planeten — eingefangen unter einem der dunkelsten
+        Himmel Deutschlands.
+      </p>
+      <div class="hero__actions">
+        <a href="/sonnensystem/" class="btn">Zur Sonnensystem-Reise</a>
+        <a href="/portfolio/" class="btn btn--ghost">Portfolio ansehen</a>
+      </div>
+    </div>
+    <p class="hero__credit label">M 42 · Großer Orionnebel · ≈ 1.344 Lichtjahre</p>
+  </section>
+
+  <!-- ============ SONNENSYSTEM-TEASER ============ -->
+  <section class="teaser">
+    <div class="container teaser__grid">
+      <div class="teaser__copy">
+        <p class="label label--accent">Interaktive Reise</p>
+        <h2>Unser Sonnensystem.<br />Zum Scrollen nah.</h2>
+        <p>
+          Von der glühenden Oberfläche der Sonne bis zum eisblauen Neptun:
+          Eine Reise durch alle acht Planeten — in Echtzeit-3D, gesteuert
+          allein durch dein Scrollen.
+        </p>
+        <a href="/sonnensystem/" class="btn">Reise starten</a>
+      </div>
+
+      <!-- animierter Mini-Orbit, reine Vektorgrafik -->
+      <div class="teaser__orbit" aria-hidden="true">
+        <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="200" cy="200" r="26" fill="var(--color-accent-warm)"></circle>
+          <circle cx="200" cy="200" r="40" stroke="var(--color-accent-warm)" stroke-opacity="0.2"></circle>
+          <g class="orbit orbit--1">
+            <circle cx="200" cy="200" r="78" stroke="var(--color-space-700)"></circle>
+            <circle cx="278" cy="200" r="5" fill="#9c8e82"></circle>
+          </g>
+          <g class="orbit orbit--2">
+            <circle cx="200" cy="200" r="118" stroke="var(--color-space-700)"></circle>
+            <circle cx="318" cy="200" r="8" fill="#4f8fd1"></circle>
+          </g>
+          <g class="orbit orbit--3">
+            <circle cx="200" cy="200" r="162" stroke="var(--color-space-700)"></circle>
+            <circle cx="362" cy="200" r="12" fill="#cda77c"></circle>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PORTFOLIO-HIGHLIGHTS ============ -->
+  <section class="highlights">
+    <div class="container">
+      <p class="label label--accent">Ausgewählte Arbeiten</p>
+      <h2>Licht, das Millionen Jahre unterwegs war.</h2>
+      <div class="highlights__grid">
+        {featured.map((entry, i) => (
+          <GalleryCard entry={entry} loading={i === 0 ? 'eager' : 'lazy'} />
+        ))}
+      </div>
+      <div class="highlights__more">
+        <a href="/portfolio/" class="btn btn--ghost">Alle Aufnahmen</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ÜBER-MICH-TEASER ============ -->
+  <section class="about">
+    <div class="container about__grid">
+      <figure class="about__media">
+        <Image
+          src={portraitImage}
+          alt="Merlin Gail mit Newton-Teleskop unter der Milchstraße"
+          width={900}
+          loading="lazy"
+        />
+      </figure>
+      <div class="about__copy">
+        <p class="label label--accent">Hinter der Kamera</p>
+        <h2>Merlin Gail</h2>
+        <p>
+          Wenn im Allgäu die Lichter ausgehen, beginnt meine Arbeit: Stunden
+          an Belichtungszeit, gesammelt in klaren Nächten — für Bilder von
+          Objekten, die Millionen Lichtjahre entfernt sind.
+        </p>
+        <a href="/ueber-mich/" class="btn btn--ghost">Mehr über mich</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    min-height: calc(100svh - 4.25rem);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    margin-top: -0.05px; /* verhindert 1px-Spalt unter der Nav */
+  }
+
+  .hero :global(.hero__bg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+
+  .hero__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(180deg, rgb(5 7 15 / 0.55) 0%, rgb(5 7 15 / 0.25) 40%, rgb(5 7 15 / 0.92) 100%);
+  }
+
+  .hero__content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: var(--space-7) 0;
+  }
+
+  .hero__kicker {
+    margin-bottom: var(--space-3);
+  }
+
+  .hero__title {
+    font-size: var(--text-hero);
+    margin-bottom: var(--space-3);
+  }
+
+  .hero__lead {
+    color: var(--color-star-400);
+    font-size: var(--text-lg);
+    margin-inline: auto;
+    margin-bottom: var(--space-5);
+  }
+
+  .hero__actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero__credit {
+    position: absolute;
+    bottom: var(--space-3);
+    right: var(--container-pad);
+    z-index: 2;
+  }
+
+  /* ---------- Teaser ---------- */
+  .teaser {
+    padding: var(--space-7) 0;
+    border-bottom: var(--border-fine);
+  }
+
+  .teaser__grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .teaser__copy h2 {
+    margin-top: var(--space-2);
+  }
+
+  .teaser__copy p {
+    color: var(--color-star-400);
+    margin-bottom: var(--space-4);
+  }
+
+  .teaser__orbit svg {
+    width: 100%;
+    max-width: 420px;
+    margin-inline: auto;
+  }
+
+  .orbit {
+    transform-origin: 200px 200px;
+    animation: orbit-spin linear infinite;
+  }
+
+  .orbit--1 { animation-duration: 14s; }
+  .orbit--2 { animation-duration: 26s; }
+  .orbit--3 { animation-duration: 44s; }
+
+  @keyframes orbit-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orbit {
+      animation: none;
+    }
+  }
+
+  /* ---------- Highlights ---------- */
+  .highlights {
+    padding: var(--space-7) 0;
+  }
+
+  .highlights__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+  }
+
+  .highlights__more {
+    margin-top: var(--space-5);
+    text-align: center;
+  }
+
+  /* ---------- About ---------- */
+  .about {
+    padding: var(--space-6) 0 var(--space-7);
+  }
+
+  .about__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    align-items: center;
+  }
+
+  .about__media {
+    margin: 0;
+    border: var(--border-fine);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .about__copy p {
+    color: var(--color-star-400);
+    margin-bottom: var(--space-4);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .teaser__grid,
+    .about__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .highlights__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .teaser__orbit {
+      order: -1;
+    }
+  }
+</style>

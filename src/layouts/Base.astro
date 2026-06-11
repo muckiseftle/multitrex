@@ -1,0 +1,63 @@
+---
+import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '../styles/global.css';
+
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import Starfield from '../components/Starfield.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Pfad zum OG-Bild relativ zur Site-Root */
+  ogImage?: string;
+  /** Sternenfeld ausblenden (z.B. auf /sonnensystem, das hat ein eigenes) */
+  noStarfield?: boolean;
+}
+
+const { title, description, ogImage = '/og-default.jpg', noStarfield = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#05070f" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Multitrex — Astrofotografie im Allgäu" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:locale" content="de_DE" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    {!noStarfield && <Starfield />}
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  main {
+    position: relative;
+    z-index: var(--z-content);
+    padding-top: 4.25rem; /* Höhe der fixierten Nav */
+  }
+</style>

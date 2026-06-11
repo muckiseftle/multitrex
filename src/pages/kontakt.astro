@@ -1,0 +1,203 @@
+---
+import Base from '../layouts/Base.astro';
+
+/*
+ * Web3Forms: kostenloser Formular-Dienst ohne eigenes Backend.
+ * TODO BETREIBER: Auf https://web3forms.com mit info@multitrex.de einen
+ * Access-Key erzeugen und unten bei WEB3FORMS_KEY eintragen.
+ */
+const WEB3FORMS_KEY = 'HIER-ACCESS-KEY-EINTRAGEN';
+---
+
+<Base
+  title="Kontakt — Multitrex Astrofotografie"
+  description="Kontakt zu Merlin Gail, Astrofotograf im Allgäu: Fragen zu Bildern, Drucken oder zur Astrofotografie — schreib mir gerne."
+>
+  <section class="contact container">
+    <header class="contact__head">
+      <p class="label label--accent">Kontakt</p>
+      <h1>Funkkontakt aufnehmen.</h1>
+      <p class="contact__lead">
+        Fragen zu einem Bild, Interesse an einem Druck oder selbst Lust auf
+        Astrofotografie? Schreib mir — ich antworte, sobald die Wolken
+        aufziehen.
+      </p>
+    </header>
+
+    <div class="contact__grid">
+      <form
+        action="https://api.web3forms.com/submit"
+        method="POST"
+        class="form"
+        id="contact-form"
+      >
+        <input type="hidden" name="access_key" value={WEB3FORMS_KEY} />
+        <input type="hidden" name="subject" value="Neue Nachricht über astrofotografie-allgaeu.de" />
+        <input type="hidden" name="from_name" value="Multitrex Website" />
+        <!-- Honeypot gegen Bots -->
+        <input type="checkbox" name="botcheck" class="visually-hidden" tabindex="-1" autocomplete="off" />
+
+        <div class="form__field">
+          <label for="name" class="label">Name</label>
+          <input type="text" id="name" name="name" required autocomplete="name" />
+        </div>
+
+        <div class="form__field">
+          <label for="email" class="label">E-Mail</label>
+          <input type="email" id="email" name="email" required autocomplete="email" />
+        </div>
+
+        <div class="form__field">
+          <label for="message" class="label">Nachricht</label>
+          <textarea id="message" name="message" rows="7" required></textarea>
+        </div>
+
+        <button type="submit" class="btn">Nachricht senden</button>
+        <p class="form__status label" role="status" aria-live="polite"></p>
+        <p class="form__privacy label">
+          Mit dem Absenden stimmst du der Verarbeitung gemäß
+          <a href="/datenschutz/">Datenschutzerklärung</a> zu.
+        </p>
+      </form>
+
+      <aside class="contact__aside">
+        <p class="label label--accent">Direkt</p>
+        <p class="contact__mail">
+          <a href="mailto:info@multitrex.de">info@multitrex.de</a>
+        </p>
+        <p class="label label--accent contact__loc-label">Standort</p>
+        <p class="contact__loc">
+          Börwang, Allgäu<br />
+          <span class="label">47.7° N · 10.3° O</span>
+        </p>
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .contact {
+    padding: var(--space-6) 0 var(--space-5);
+  }
+
+  .contact__head {
+    max-width: 60ch;
+    margin-bottom: var(--space-6);
+  }
+
+  .contact__head h1 {
+    margin-top: var(--space-2);
+  }
+
+  .contact__lead {
+    color: var(--color-star-400);
+  }
+
+  .contact__grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .form__field {
+    margin-bottom: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .form input[type='text'],
+  .form input[type='email'],
+  .form textarea {
+    width: 100%;
+    background: var(--color-space-900);
+    border: var(--border-fine);
+    border-radius: var(--radius-sm);
+    color: var(--color-star-100);
+    font: inherit;
+    padding: 0.8em 1em;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .form input:focus,
+  .form textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--glow-accent);
+  }
+
+  .form__status {
+    margin-top: var(--space-3);
+    min-height: 1.2em;
+  }
+
+  .form__status[data-state='ok'] {
+    color: var(--color-accent);
+  }
+
+  .form__status[data-state='error'] {
+    color: var(--color-accent-warm);
+  }
+
+  .form__privacy {
+    margin-top: var(--space-2);
+  }
+
+  .contact__aside {
+    border: var(--border-fine);
+    border-radius: var(--radius-md);
+    background: var(--color-space-900);
+    padding: var(--space-4);
+  }
+
+  .contact__mail {
+    font-family: var(--font-mono);
+    margin: var(--space-2) 0 var(--space-4);
+  }
+
+  .contact__loc-label {
+    margin-top: var(--space-3);
+  }
+
+  .contact__loc {
+    margin: var(--space-2) 0 0;
+  }
+
+  @media (max-width: 820px) {
+    .contact__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Versand per fetch, damit der Besucher auf der Seite bleibt
+  const form = document.getElementById('contact-form') as HTMLFormElement | null;
+  const status = form?.querySelector('.form__status') as HTMLElement | null;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!status) return;
+    status.dataset.state = '';
+    status.textContent = 'Wird gesendet …';
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        status.dataset.state = 'ok';
+        status.textContent = 'Nachricht gesendet — danke! Ich melde mich bald.';
+        form.reset();
+      } else {
+        throw new Error(String(res.status));
+      }
+    } catch {
+      status.dataset.state = 'error';
+      status.textContent =
+        'Senden fehlgeschlagen. Bitte direkt an info@multitrex.de schreiben.';
+    }
+  });
+</script>

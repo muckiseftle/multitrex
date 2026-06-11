@@ -1,0 +1,34 @@
+---
+/**
+ * Marken-Signet: stilisierter Orbit mit Planet — greift die Blenden-Os
+ * des Signatur-Logos auf. Reine Vektorgrafik, skaliert verlustfrei.
+ */
+interface Props {
+  size?: number;
+}
+const { size = 28 } = Astro.props;
+---
+
+<svg
+  width={size}
+  height={size}
+  viewBox="0 0 48 48"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <!-- Zentralstern -->
+  <circle cx="24" cy="24" r="7" fill="var(--color-accent-warm)"></circle>
+  <circle cx="24" cy="24" r="10.5" stroke="var(--color-accent-warm)" stroke-opacity="0.25" stroke-width="1"></circle>
+  <!-- Orbit-Ellipse -->
+  <ellipse
+    cx="24"
+    cy="24"
+    rx="21"
+    ry="9"
+    stroke="var(--color-accent)"
+    stroke-width="1.5"
+    transform="rotate(-24 24 24)"></ellipse>
+  <!-- Planet auf dem Orbit -->
+  <circle cx="41.5" cy="15" r="3" fill="var(--color-accent)"></circle>
+</svg>

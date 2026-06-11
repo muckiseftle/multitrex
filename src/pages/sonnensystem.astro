@@ -1,0 +1,344 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+// Reihenfolge der Reise: Sonne -> Merkur ... Neptun (Daten aus planets.json)
+const order = ['merkur', 'venus', 'erde', 'mars', 'jupiter', 'saturn', 'uranus', 'neptun'];
+const planetsRaw = await getCollection('planets');
+const planets = order.map((id) => {
+  const p = planetsRaw.find((e) => e.data.id === id);
+  if (!p) throw new Error(`Planet fehlt in planets.json: ${id}`);
+  return p.data;
+});
+
+const fmt = new Intl.NumberFormat('de-DE');
+---
+
+<Base
+  title="Unser Sonnensystem — eine 3D-Reise | Multitrex"
+  description="Scroll dich von der Sonne bis zum Neptun: Eine interaktive 3D-Reise durch unser Sonnensystem mit Fakten zu allen acht Planeten — von Multitrex Astrofotografie."
+  noStarfield
+>
+  <div id="journey" data-journey>
+    <!-- Fixierter WebGL-Canvas — wird per JS erzeugt, sobald bereit.
+         Bis dahin (und als Fallback) trägt das CSS-Sonnenglühen die Szene. -->
+    <div class="stage" aria-hidden="true">
+      <div class="stage__glow" id="css-sun"></div>
+      <canvas id="solar-canvas" class="stage__canvas"></canvas>
+    </div>
+
+    <!-- ============ SEKTION: SONNE (Hero / LCP) ============ -->
+    <section class="sec sec--sun" id="sonne" data-body="sonne">
+      <div class="sec__inner container">
+        <p class="label label--accent">Scroll-Reise · 8 Planeten · 4,5 Mrd. km</p>
+        <h1 class="sec--sun__title">Unser<br />Sonnensystem</h1>
+        <p class="sec--sun__lead">
+          Acht Planeten, ein Stern — und dazwischen: fast nichts.
+          Scrolle, um die Reise zu beginnen.
+        </p>
+        <div class="scroll-hint" aria-hidden="true">
+          <span class="label">Scrollen</span>
+          <span class="scroll-hint__line"></span>
+        </div>
+      </div>
+      <div class="sun-facts container" data-reveal>
+        <p class="label label--warm">Die Sonne</p>
+        <p class="sun-facts__text">
+          99,86 % der Masse des gesamten Sonnensystems stecken in ihr.
+          In ihrem Kern verschmelzen pro Sekunde 600 Millionen Tonnen
+          Wasserstoff zu Helium — das Licht dieser Reaktion braucht
+          8 Minuten und 20 Sekunden bis zu deinen Augen.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ SEKTIONEN: PLANETEN ============ -->
+    {
+      planets.map((p, i) => (
+        <section class="sec sec--planet" id={p.id} data-body={p.id} data-index={i}>
+          <div class="sec__inner container">
+            <div class="panel" data-reveal>
+              <header class="panel__head">
+                <p class="label label--accent">
+                  Planet {String(i + 1).padStart(2, '0')} / 08
+                </p>
+                <h2 class="panel__name">{p.name}</h2>
+                <p class="panel__tagline">{p.tagline}</p>
+              </header>
+
+              <svg class="panel__line" viewBox="0 0 120 2" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="0" y1="1" x2="120" y2="1" stroke="var(--color-accent)" stroke-width="1" />
+              </svg>
+
+              <dl class="panel__hud">
+                <div>
+                  <dt class="label">Durchmesser</dt>
+                  <dd data-count={p.diameterKm}>{fmt.format(p.diameterKm)} km</dd>
+                </div>
+                <div>
+                  <dt class="label">Sonnen-Distanz</dt>
+                  <dd data-count={p.distanceSunMkm}>{fmt.format(p.distanceSunMkm)} Mio. km</dd>
+                </div>
+                <div>
+                  <dt class="label">Tageslänge</dt>
+                  <dd>{p.dayLength}</dd>
+                </div>
+                <div>
+                  <dt class="label">Jahreslänge</dt>
+                  <dd>{p.yearLength}</dd>
+                </div>
+                <div>
+                  <dt class="label">Temperatur</dt>
+                  <dd>{p.tempC}</dd>
+                </div>
+                <div>
+                  <dt class="label">Monde</dt>
+                  <dd>{p.moons}</dd>
+                </div>
+              </dl>
+
+              <p class="panel__fact">
+                <span class="label label--warm">Wusstest du?</span>
+                {p.funFact}
+              </p>
+            </div>
+          </div>
+        </section>
+      ))
+    }
+
+    <!-- ============ OUTRO ============ -->
+    <section class="sec sec--outro" id="outro">
+      <div class="sec__inner container">
+        <p class="label label--accent" data-reveal>Ende der Reise — 4,5 Milliarden Kilometer</p>
+        <h2 data-reveal>Und all das fotografiere<br />ich aus dem Allgäu.</h2>
+        <p class="sec--outro__lead" data-reveal>
+          Galaxien, Nebel und Planeten — mit Teleskop und Kamera,
+          unter einem der dunkelsten Himmel Deutschlands.
+        </p>
+        <div class="sec--outro__actions" data-reveal>
+          <a href="/portfolio/" class="btn">Zum Portfolio</a>
+          <a href="/kontakt/" class="btn btn--ghost">Kontakt</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  /* Nav-Padding der Base neutralisieren — die Journey beginnt fullscreen */
+  :global(main) {
+    padding-top: 0 !important;
+  }
+
+  #journey {
+    position: relative;
+  }
+
+  /* ---------- Stage: Canvas + CSS-Glow ---------- */
+  .stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: var(--color-space-950);
+    overflow: hidden;
+  }
+
+  /* CSS-Sonnenglühen: sofort da, kein JS nötig — LCP-sicher.
+     Wird vom Canvas überblendet, sobald WebGL bereit ist. */
+  .stage__glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 118%, rgb(255 220 160 / 0.95) 0%, rgb(255 180 92 / 0.55) 18%, rgb(200 110 50 / 0.22) 38%, transparent 62%),
+      radial-gradient(circle at 50% 130%, rgb(255 244 220 / 1) 0%, transparent 30%);
+    transition: opacity 1.2s ease;
+  }
+
+  .stage__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+
+  .stage[data-3d-ready] .stage__canvas {
+    opacity: 1;
+  }
+
+  .stage[data-3d-ready] .stage__glow {
+    opacity: 0;
+  }
+
+  /* ---------- Sektionen ---------- */
+  .sec {
+    position: relative;
+    z-index: var(--z-content);
+    min-height: 120svh;
+    display: grid;
+    align-content: center;
+  }
+
+  .sec--sun {
+    min-height: 150svh;
+    align-content: start;
+    padding-top: 22svh;
+  }
+
+  .sec--sun__title {
+    font-size: var(--text-hero);
+    margin: var(--space-3) 0;
+  }
+
+  .sec--sun__lead {
+    color: var(--color-star-400);
+    font-size: var(--text-lg);
+    max-width: 38ch;
+  }
+
+  .scroll-hint {
+    margin-top: var(--space-6);
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2);
+  }
+
+  .scroll-hint__line {
+    width: 1px;
+    height: 64px;
+    background: linear-gradient(var(--color-accent), transparent);
+    animation: hint-pulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes hint-pulse {
+    0%, 100% { transform: scaleY(1); opacity: 1; }
+    50% { transform: scaleY(0.55); opacity: 0.4; }
+  }
+
+  .sun-facts {
+    margin-top: 38svh;
+    max-width: 46ch;
+  }
+
+  .label--warm {
+    color: var(--color-accent-warm);
+  }
+
+  .sun-facts__text {
+    margin-top: var(--space-2);
+    color: var(--color-star-100);
+    font-size: var(--text-lg);
+  }
+
+  /* ---------- Planeten-Panels ---------- */
+  .sec--planet .sec__inner {
+    display: grid;
+    justify-items: start;
+  }
+
+  /* Panels rechts, Planet links im 3D-Raum — auf Mobile untereinander */
+  .panel {
+    width: min(30rem, 100%);
+    background: rgb(10 15 30 / 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: var(--border-fine);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-4) var(--space-4);
+    justify-self: end;
+  }
+
+  /* Abwechslung: jedes zweite Panel links */
+  .sec--planet:nth-of-type(even) .panel {
+    justify-self: start;
+  }
+
+  .panel__name {
+    font-size: var(--text-3xl);
+    margin: var(--space-1) 0 0;
+  }
+
+  .panel__tagline {
+    color: var(--color-star-400);
+    margin: var(--space-1) 0 0;
+  }
+
+  .panel__line {
+    width: 100%;
+    height: 2px;
+    margin: var(--space-3) 0;
+  }
+
+  .panel__hud {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-3);
+  }
+
+  .panel__hud dd {
+    margin: 2px 0 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-star-100);
+  }
+
+  .panel__fact {
+    margin: 0;
+    color: var(--color-star-400);
+    border-top: 1px solid rgb(27 37 64 / 0.6);
+    padding-top: var(--space-3);
+  }
+
+  .panel__fact .label {
+    display: block;
+    margin-bottom: var(--space-1);
+  }
+
+  /* ---------- Outro ---------- */
+  .sec--outro {
+    min-height: 110svh;
+    text-align: center;
+  }
+
+  .sec--outro .sec__inner {
+    display: grid;
+    justify-items: center;
+  }
+
+  .sec--outro__lead {
+    color: var(--color-star-400);
+    font-size: var(--text-lg);
+  }
+
+  .sec--outro__actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: var(--space-4);
+  }
+
+  @media (max-width: 700px) {
+    .sec {
+      min-height: 105svh;
+    }
+
+    /* Bottom-Sheet-Layout: Panel unten, Planet schwebt im oberen Drittel */
+    .sec--planet {
+      align-content: end;
+      padding-bottom: 7svh;
+    }
+
+    .panel {
+      justify-self: stretch !important;
+    }
+  }
+</style>
+
+<script>
+  import { initJourney } from '../solar/journey';
+  initJourney();
+</script>

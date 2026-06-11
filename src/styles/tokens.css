@@ -1,0 +1,70 @@
+/* ============================================================
+   MULTITREX — Design-Tokens
+   Marke: „Deep Space / Allgäu-Nacht"
+   ============================================================ */
+
+:root {
+  /* ---------- Farben ---------- */
+  --color-space-950: #05070f; /* Seitenhintergrund — fast-schwarzes Blau */
+  --color-space-900: #0a0f1e; /* Karten, Panels */
+  --color-space-800: #111831; /* erhabene Flächen, Hover */
+  --color-space-700: #1b2540; /* Borders, Trennlinien */
+
+  --color-star-100: #e8edf7; /* Primärtext — kühles Weiß */
+  --color-star-400: #8b97b5; /* Sekundärtext, Labels */
+  --color-star-600: #56617d; /* gedämpfte Meta-Texte */
+
+  --color-accent: #6fe3ff; /* „Ion-Cyan" — Links, CTAs, HUD */
+  --color-accent-dim: #3ba8c4; /* Cyan abgedunkelt für Flächen */
+  --color-accent-warm: #ffb45c; /* „Solar Amber" — Sonne, Highlights */
+
+  --glow-accent: 0 0 24px rgb(111 227 255 / 0.25);
+  --glow-warm: 0 0 32px rgb(255 180 92 / 0.3);
+
+  /* ---------- Typografie ---------- */
+  --font-display: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* fluide Typo-Skala */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
+  --text-xl: clamp(1.4rem, 1.2rem + 1vw, 2rem);
+  --text-2xl: clamp(1.9rem, 1.5rem + 2vw, 3rem);
+  --text-3xl: clamp(2.6rem, 1.8rem + 4vw, 5rem);
+  --text-hero: clamp(3rem, 2rem + 6vw, 7rem);
+
+  --tracking-label: 0.12em; /* Mono-Versalien-Labels */
+  --leading-tight: 1.1;
+  --leading-body: 1.65;
+
+  /* ---------- Spacing / Layout ---------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+  --space-7: 6.5rem;
+
+  --container-max: 72rem;
+  --container-pad: clamp(1rem, 4vw, 2.5rem);
+
+  --radius-sm: 4px;
+  --radius-md: 10px;
+
+  --border-fine: 1px solid var(--color-space-700);
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* expo.out */
+  --dur-fast: 180ms;
+  --dur-base: 300ms;
+
+  /* ---------- Z-Ebenen ---------- */
+  --z-canvas: 0;
+  --z-content: 10;
+  --z-nav: 100;
+  --z-overlay: 1000;
+}

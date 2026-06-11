@@ -1,0 +1,7 @@
+# Alte WordPress-URLs -> neue Struktur (301 = permanent, gut für SEO)
+/mond/                /portfolio/mineralmond/    301
+/leo-triplet-galax/   /portfolio/leo-triplet/    301
+/equipment/           /ueber-mich/               301
+/home-nature-v2/      /                          301
+/feed/                /                          301
+/comments/feed/       /                          301
