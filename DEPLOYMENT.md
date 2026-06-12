@@ -1,5 +1,29 @@
 # Go-Live-Anleitung: astrofotografie-allgaeu.de
 
+> **STAND 06/2026: Die Seite läuft bereits auf GitHub Pages**
+> (https://muckiseftle.github.io/multitrex/), die Custom Domain ist bei
+> GitHub hinterlegt. **Es fehlt nur noch der DNS-Schritt bei Strato:**
+>
+> 1. Bei Strato einloggen → Domainverwaltung → `astrofotografie-allgaeu.de`
+>    → DNS-Einstellungen
+> 2. **A-Records** für die Hauptdomain (@) setzen — alle vier:
+>    `185.199.108.153` · `185.199.109.153` · `185.199.110.153` · `185.199.111.153`
+>    (vorhandene A-Records/„WordPress-Hosting"-Verknüpfung dafür entfernen)
+> 3. **CNAME** für `www` → `muckiseftle.github.io`
+> 4. 1–24 h warten (DNS-Propagation). GitHub stellt dann automatisch das
+>    SSL-Zertifikat aus. Danach im Repo unter Settings → Pages
+>    **„Enforce HTTPS"** aktivieren.
+>
+> E-Mail ist nicht betroffen: info@multitrex.de hängt an der Domain
+> multitrex.de, nicht an astrofotografie-allgaeu.de. Falls es doch
+> Mail-Adressen @astrofotografie-allgaeu.de gibt: MX-Records NICHT anfassen.
+>
+> Achtung: Sobald die A-Records umgestellt sind, ist das alte WordPress
+> unter der Domain nicht mehr erreichbar (Hosting-Paket selbst bleibt
+> bestehen, bis du es kündigst).
+
+*Die ursprüngliche Cloudflare-Anleitung unten bleibt als Alternative dokumentiert.*
+
 Die neue Website ist eine statische Astro-Site — sie braucht kein WordPress,
 keine Datenbank und kein Hosting-Paket. Empfohlen: **Cloudflare Pages**
 (kostenlos, unbegrenzter Traffic, automatisches SSL — das löst auch das
