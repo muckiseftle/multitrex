@@ -42,9 +42,6 @@ jobs:
 
       - name: Statisch bauen
         run: npm run build
-        env:
-          # aktiviert site/base für den GitHub-Pages-Unterpfad (astro.config.mjs)
-          GITHUB_PAGES: 'true'
 
       - name: Build-Artefakt hochladen
         uses: actions/upload-pages-artifact@v3

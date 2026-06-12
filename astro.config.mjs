@@ -2,14 +2,10 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
-// GitHub Pages serviert unter https://muckiseftle.github.io/multitrex/ —
-// der Actions-Workflow setzt GITHUB_PAGES=true. Lokal und auf der eigenen
-// Domain (Cloudflare) bleibt alles auf Root-Pfaden.
-const isGitHubPages = process.env.GITHUB_PAGES === 'true';
-
+// GitHub Pages mit Custom Domain serviert an der Root —
+// muckiseftle.github.io/multitrex leitet automatisch auf die Domain um.
 export default defineConfig({
-  site: isGitHubPages ? 'https://muckiseftle.github.io' : 'https://astrofotografie-allgaeu.de',
-  base: isGitHubPages ? '/multitrex' : undefined,
+  site: 'https://astrofotografie-allgaeu.de',
   integrations: [sitemap()],
   prefetch: {
     prefetchAll: true,
