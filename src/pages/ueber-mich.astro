@@ -43,7 +43,7 @@ const equipment = [
     </figure>
 
     <div class="about__body">
-      <div class="about__text">
+      <div class="about__text reveal">
         <h2>Warum Astrofotografie?</h2>
         <p>
           Ich bin Merlin Gail, und ich fotografiere Dinge, die man mit bloßem
@@ -67,13 +67,13 @@ const equipment = [
         </p>
       </div>
 
-      <aside class="about__aside">
+      <aside class="about__aside reveal">
         <p class="label label--accent">Equipment</p>
         <DataHud items={equipment} columns={1} />
       </aside>
     </div>
 
-    <div class="about__gear">
+    <div class="about__gear reveal">
       <figure>
         <Image src={tubusImage} alt="Blick in den Newton-Tubus mit Fangspiegel, darüber die Nikon D7500" width={800} loading="lazy" />
         <figcaption class="label">Blick in den Newton-Tubus — oben die Nikon D7500.</figcaption>

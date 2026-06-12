@@ -48,7 +48,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
   <!-- ============ SONNENSYSTEM-TEASER ============ -->
   <section class="teaser">
     <div class="container teaser__grid">
-      <div class="teaser__copy">
+      <div class="teaser__copy reveal">
         <p class="label label--accent">Interaktive Reise</p>
         <h2>Unser Sonnensystem.<br />Zum Scrollen nah.</h2>
         <p>
@@ -60,7 +60,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
       </div>
 
       <!-- animierter Mini-Orbit, reine Vektorgrafik -->
-      <div class="teaser__orbit" aria-hidden="true">
+      <div class="teaser__orbit reveal" aria-hidden="true">
         <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="200" cy="200" r="26" fill="var(--color-accent-warm)"></circle>
           <circle cx="200" cy="200" r="40" stroke="var(--color-accent-warm)" stroke-opacity="0.2"></circle>
@@ -84,8 +84,8 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
   <!-- ============ PORTFOLIO-HIGHLIGHTS ============ -->
   <section class="highlights">
     <div class="container">
-      <p class="label label--accent">Ausgewählte Arbeiten</p>
-      <h2>Licht, das Millionen Jahre unterwegs war.</h2>
+      <p class="label label--accent reveal">Ausgewählte Arbeiten</p>
+      <h2 class="reveal">Licht, das Millionen Jahre unterwegs war.</h2>
       <div class="highlights__grid">
         {featured.map((entry, i) => (
           <GalleryCard entry={entry} loading={i === 0 ? 'eager' : 'lazy'} />
@@ -100,7 +100,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
   <!-- ============ ÜBER-MICH-TEASER ============ -->
   <section class="about">
     <div class="container about__grid">
-      <figure class="about__media">
+      <figure class="about__media reveal">
         <Image
           src={portraitImage}
           alt="Merlin Gail mit Newton-Teleskop unter der Milchstraße"
@@ -108,7 +108,7 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
           loading="lazy"
         />
       </figure>
-      <div class="about__copy">
+      <div class="about__copy reveal">
         <p class="label label--accent">Hinter der Kamera</p>
         <h2>Merlin Gail</h2>
         <p>
@@ -142,12 +142,38 @@ const featured = (await getCollection('portfolio', (e) => e.data.featured)).sort
     z-index: 0;
   }
 
+  /* kaum merklicher Ken-Burns-Zoom — der Nebel „atmet" */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero :global(.hero__bg) {
+      animation: hero-breathe 36s var(--ease-out) both;
+      will-change: transform;
+    }
+
+    @keyframes hero-breathe {
+      from {
+        transform: scale(1.07);
+      }
+      to {
+        transform: scale(1);
+      }
+    }
+  }
+
   .hero__scrim {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background:
-      linear-gradient(180deg, rgb(5 7 15 / 0.55) 0%, rgb(5 7 15 / 0.25) 40%, rgb(5 7 15 / 0.92) 100%);
+    /* dichte Stops gegen Banding im dunklen Verlauf */
+    background: linear-gradient(
+      180deg,
+      rgb(5 7 15 / 0.55) 0%,
+      rgb(5 7 15 / 0.38) 22%,
+      rgb(5 7 15 / 0.25) 40%,
+      rgb(5 7 15 / 0.34) 56%,
+      rgb(5 7 15 / 0.52) 70%,
+      rgb(5 7 15 / 0.74) 84%,
+      rgb(5 7 15 / 0.92) 100%
+    );
   }
 
   .hero__content {
