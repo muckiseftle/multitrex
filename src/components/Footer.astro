@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import OrbitMark from './OrbitMark.astro';
+import logo from '../assets/brand/logo-merlin-gail.png';
 
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
 const year = new Date().getFullYear();
@@ -9,9 +11,16 @@ const year = new Date().getFullYear();
   <div class="container">
     <div class="footer__grid">
       <div class="footer__brand">
-        <a href={base + '/'} class="footer__logo" aria-label="Multitrex — Startseite">
+        <a href={base + '/'} class="footer__logo" aria-label="Merlin Gail Astrofotografie — Startseite">
           <OrbitMark size={26} />
-          <span>MULTITREX</span>
+          <Image
+            src={logo}
+            alt="Merlin Gail — Astrofotografie"
+            class="footer__logo-img"
+            height={104}
+            densities={[1, 2]}
+            loading="lazy"
+          />
         </a>
         <p class="footer__claim">
           Astrofotografie aus dem Allgäu — wo die Nächte noch dunkel sind.
@@ -64,11 +73,12 @@ const year = new Date().getFullYear();
   .footer__logo {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    color: var(--color-star-100);
+    gap: 0.8rem;
+  }
+
+  .footer__logo :global(.footer__logo-img) {
+    height: 3.25rem;
+    width: auto;
   }
 
   .footer__claim {
