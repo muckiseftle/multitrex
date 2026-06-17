@@ -1,0 +1,35 @@
+# Build-Check für jeden Pull Request (auch von Dependabot).
+# Schlägt der Build fehl, kann der PR nicht gemergt werden — damit erreicht
+# eine kaputte Aktualisierung niemals den main-Branch und somit nie die
+# Live-Seite. (Der eigentliche Deploy passiert nur auf main, siehe deploy.yml.)
+name: CI (Build-Check)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten installieren (sauber aus dem Lockfile)
+        run: npm ci
+
+      - name: Statisch bauen (validiert auch Inhalte & Typen)
+        run: npm run build

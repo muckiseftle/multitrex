@@ -1,0 +1,37 @@
+# Dependabot hält Abhängigkeiten automatisch aktuell und öffnet bei
+# Sicherheitslücken sofort Update-Pull-Requests. Die Updates werden vor dem
+# Mergen vom CI-Build geprüft (siehe .github/workflows/ci.yml), damit nie eine
+# kaputte Version live geht.
+version: 2
+updates:
+  # JavaScript-/Astro-Abhängigkeiten (npm)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps"
+    groups:
+      # Harmlose Updates (Patch + Minor) in EINEN PR bündeln — weniger Rauschen
+      patch-and-minor:
+        update-types: ["minor", "patch"]
+    # Major-Updates kommen als einzelne PRs (brauchen menschliche Prüfung)
+
+  # Die GitHub-Actions in den Workflows selbst (z. B. actions/checkout)
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: "Europe/Berlin"
+    labels: ["ci"]
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        update-types: ["minor", "patch"]

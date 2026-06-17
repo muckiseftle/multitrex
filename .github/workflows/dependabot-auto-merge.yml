@@ -1,0 +1,35 @@
+# Merged Dependabot-PRs automatisch — aber NUR Patch- und Minor-Updates und
+# NUR, wenn der CI-Build (ci.yml) grün ist. So bleibt die Seite ohne Zutun
+# aktuell und sicher, ohne dass riskante Major-Updates ungeprüft durchrutschen.
+#
+# Voraussetzung (einmalig in den Repo-Einstellungen):
+#   - Settings → General → Pull Requests → "Allow auto-merge" aktivieren
+#   - Settings → Branches → Branch-Protection-Regel für "main":
+#       "Require status checks to pass" → Check "build" (aus CI) auswählen.
+#     Erst dadurch WARTET der Auto-Merge auf den grünen Build.
+name: Dependabot Auto-Merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update-Metadaten ermitteln
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-Merge für Patch/Minor aktivieren
+        if: >-
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
