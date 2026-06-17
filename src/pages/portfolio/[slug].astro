@@ -1,8 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
-import { Image } from 'astro:assets';
 import Base from '../../layouts/Base.astro';
 import DataHud from '../../components/DataHud.astro';
+import Lightbox from '../../components/Lightbox.astro';
 
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
 
@@ -18,12 +18,18 @@ const { entry } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 
-const hudItems = [
+const objektItems = [
   d.object && { label: 'Objekt', value: d.object },
   d.objectType && { label: 'Typ', value: d.objectType },
   d.constellation && d.constellation !== '—' && { label: 'Sternbild', value: d.constellation },
   d.distance && { label: 'Entfernung', value: d.distance },
-  d.captureDate && { label: 'Aufnahme', value: d.captureDate },
+].filter(Boolean) as { label: string; value: string }[];
+
+const aufnahmeItems = [
+  d.integration && { label: 'Gesamtbelichtung', value: d.integration },
+  d.frames && { label: 'Einzelbilder', value: d.frames },
+  d.gear && { label: 'Setup', value: d.gear },
+  d.captureDate && { label: 'Aufgenommen', value: d.captureDate },
 ].filter(Boolean) as { label: string; value: string }[];
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -82,14 +88,7 @@ const jsonLd = [
     </header>
 
     <figure class="detail__media">
-      <Image
-        src={d.image}
-        alt={altText}
-        width={1920}
-        loading="eager"
-        fetchpriority="high"
-        quality={80}
-      />
+      <Lightbox image={d.image} alt={altText} />
     </figure>
 
     <div class="detail__body">
@@ -97,7 +96,18 @@ const jsonLd = [
         <Content />
       </div>
       <aside class="detail__aside">
-        <DataHud items={hudItems} columns={1} />
+        {objektItems.length > 0 && (
+          <div class="detail__data">
+            <p class="label label--accent">Objektdaten</p>
+            <DataHud items={objektItems} columns={1} />
+          </div>
+        )}
+        {aufnahmeItems.length > 0 && (
+          <div class="detail__data">
+            <p class="label label--accent">Aufnahme</p>
+            <DataHud items={aufnahmeItems} columns={1} />
+          </div>
+        )}
       </aside>
     </div>
   </article>
@@ -142,6 +152,15 @@ const jsonLd = [
   .detail__aside {
     position: sticky;
     top: 6rem;
+  }
+
+  .detail__data + .detail__data {
+    margin-top: var(--space-4);
+  }
+
+  .detail__data .label {
+    display: block;
+    margin-bottom: var(--space-2);
   }
 
   @media (max-width: 820px) {

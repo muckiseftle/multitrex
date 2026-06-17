@@ -7,6 +7,7 @@ object: 'M 42'
 constellation: 'Orion'
 distance: '≈ 1.344 Lichtjahre'
 objectType: 'Emissionsnebel'
+category: 'Nebel'
 featured: true
 ---
 

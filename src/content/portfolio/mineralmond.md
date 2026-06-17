@@ -7,6 +7,7 @@ object: 'Mond'
 constellation: '—'
 distance: '≈ 384.400 km'
 objectType: 'Erdtrabant'
+category: 'Mond & Planeten'
 featured: true
 ---
 
