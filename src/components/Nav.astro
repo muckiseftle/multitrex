@@ -1,6 +1,5 @@
 ---
 import { Image } from 'astro:assets';
-import OrbitMark from './OrbitMark.astro';
 import logo from '../assets/brand/logo-merlin-gail.png';
 
 // Basis-Pfad ('' lokal/eigene Domain, '/multitrex' auf GitHub Pages)
@@ -19,7 +18,6 @@ const current = Astro.url.pathname;
 <header class="nav-wrap">
   <nav class="nav container" aria-label="Hauptnavigation">
     <a href={base + '/'} class="brand" aria-label="Merlin Gail Astrofotografie — Startseite">
-      <OrbitMark size={30} />
       <Image
         src={logo}
         alt="Merlin Gail — Astrofotografie"
