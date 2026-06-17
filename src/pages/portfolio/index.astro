@@ -7,11 +7,30 @@ const entries = (await getCollection('portfolio')).sort(
   (a, b) => a.data.order - b.data.order
 );
 const [lead, ...rest] = entries;
+
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
+const siteUrl = (Astro.site?.toString() ?? 'https://astrofotografie-allgaeu.de/').replace(/\/$/, '');
+
+// ItemList: signalisiert Google die Galerie-Struktur und verlinkt jedes Foto
+const jsonLd = {
+  '@type': 'CollectionPage',
+  name: 'Astrofotografie-Portfolio aus dem Allgäu',
+  mainEntity: {
+    '@type': 'ItemList',
+    itemListElement: entries.map((entry, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${siteUrl}${base}/portfolio/${entry.id}/`,
+      name: entry.data.title,
+    })),
+  },
+};
 ---
 
 <Base
-  title="Portfolio — Multitrex Astrofotografie"
+  title="Astrofotografie-Portfolio aus dem Allgäu | Multitrex"
   description="Astrofotografien aus dem Allgäu: Orionnebel, Leo-Triplett, Whirlpool-Galaxie, Mineralmond und mehr — aufgenommen von Merlin Gail."
+  jsonLd={jsonLd}
 >
   <section class="gallery container">
     <header class="gallery__head reveal">

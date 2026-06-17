@@ -25,11 +25,50 @@ const hudItems = [
   d.distance && { label: 'Entfernung', value: d.distance },
   d.captureDate && { label: 'Aufnahme', value: d.captureDate },
 ].filter(Boolean) as { label: string; value: string }[];
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const siteUrl = (Astro.site?.toString() ?? 'https://astrofotografie-allgaeu.de/').replace(/\/$/, '');
+const imageUrl = new URL(d.image.src, Astro.site).toString();
+
+// Bildreiche, präzise Alt-/Bildbeschreibung — gut für Google Bilder
+const altText = `${d.title}${d.object ? ` (${d.object})` : ''} — Astrofoto aufgenommen im Allgäu von Merlin Gail`;
+
+const jsonLd = [
+  {
+    '@type': 'ImageObject',
+    '@id': `${canonical}#image`,
+    contentUrl: imageUrl,
+    url: imageUrl,
+    width: d.image.width,
+    height: d.image.height,
+    name: d.title,
+    caption: d.subtitle ?? altText,
+    description: altText,
+    creator: { '@id': `${siteUrl}/#person` },
+    copyrightHolder: { '@id': `${siteUrl}/#person` },
+    creditText: 'Merlin Gail',
+    copyrightNotice: '© Merlin Gail',
+    contentLocation: { '@type': 'Place', name: 'Allgäu, Deutschland' },
+    keywords: [d.object, d.objectType, d.constellation, 'Astrofotografie', 'Allgäu'].filter(
+      (k) => k && k !== '—'
+    ),
+  },
+  {
+    '@type': 'BreadcrumbList',
+    '@id': `${canonical}#breadcrumb`,
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Startseite', item: `${siteUrl}/` },
+      { '@type': 'ListItem', position: 2, name: 'Portfolio', item: `${siteUrl}/portfolio/` },
+      { '@type': 'ListItem', position: 3, name: d.title, item: canonical.toString() },
+    ],
+  },
+];
 ---
 
 <Base
-  title={`${d.title} — Multitrex Astrofotografie`}
-  description={d.subtitle ?? `Astrofoto: ${d.title}, aufgenommen im Allgäu von Merlin Gail.`}
+  title={`${d.title} — Astrofotografie aus dem Allgäu | Multitrex`}
+  description={d.subtitle ?? `Astrofoto „${d.title}“${d.object ? `, ${d.object}` : ''}, aufgenommen im Allgäu von Merlin Gail.`}
+  jsonLd={jsonLd}
 >
   <article class="detail container">
     <nav class="detail__back" aria-label="Zurück">
@@ -45,7 +84,7 @@ const hudItems = [
     <figure class="detail__media">
       <Image
         src={d.image}
-        alt={`Astrofoto: ${d.title}`}
+        alt={altText}
         width={1920}
         loading="eager"
         fetchpriority="high"
