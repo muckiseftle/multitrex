@@ -7,6 +7,7 @@ object: 'Mond'
 constellation: '—'
 distance: '≈ 384.400 km'
 objectType: 'Erdtrabant'
+category: 'Mond & Planeten'
 ---
 
 Krater, Meere und Strahlenkränze: Schon mit mittlerer Brennweite zeigt der

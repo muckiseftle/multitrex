@@ -15,11 +15,53 @@ interface Props {
   ogImage?: string;
   /** Sternenfeld ausblenden (z.B. auf /sonnensystem, das hat ein eigenes) */
   noStarfield?: boolean;
+  /** Seitenspezifische Schema.org-Knoten, die in den @graph aufgenommen werden */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
-const { title, description, ogImage = `${base}/og-default.jpg`, noStarfield = false } = Astro.props;
+const { title, description, ogImage = `${base}/og-default.jpg`, noStarfield = false, jsonLd } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+
+// Site-Root ohne abschließenden Slash, Basis für alle @id-Referenzen
+const siteUrl = (Astro.site?.toString() ?? 'https://astrofotografie-allgaeu.de/').replace(/\/$/, '');
+
+// Globale Entitäten: auf jeder Seite identisch, damit Google die Marke
+// „Merlin Gail / Astrofotografie im Allgäu" als ein Subjekt versteht.
+const globalGraph: Record<string, unknown>[] = [
+  {
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    url: `${siteUrl}/`,
+    name: 'Multitrex — Astrofotografie im Allgäu',
+    inLanguage: 'de-DE',
+    publisher: { '@id': `${siteUrl}/#person` },
+  },
+  {
+    '@type': 'Person',
+    '@id': `${siteUrl}/#person`,
+    name: 'Merlin Gail',
+    alternateName: 'Multitrex Astrofotografie',
+    jobTitle: 'Astrofotograf',
+    url: `${siteUrl}/`,
+    image: new URL(`${base}/og-default.jpg`, Astro.site).toString(),
+    email: 'info@multitrex.de',
+    knowsAbout: ['Astrofotografie', 'Deep-Sky-Fotografie', 'Astronomie', 'Nachthimmel'],
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Börwang',
+      addressRegion: 'Bayern',
+      postalCode: '87490',
+      addressCountry: 'DE',
+    },
+  },
+];
+
+const pageNodes = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [...globalGraph, ...pageNodes],
+};
 ---
 
 <!doctype html>
@@ -44,6 +86,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:image" content={new URL(ogImage, Astro.site)} />
     <meta property="og:locale" content="de_DE" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Strukturierte Daten (Schema.org) — hilft Google, die Inhalte und die
+         Marke „Astrofotografie im Allgäu" als Entität zu verstehen -->
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline />
   </head>
   <body>
     {!noStarfield && <Starfield />}
