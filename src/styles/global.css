@@ -168,7 +168,8 @@ canvas {
     .card {
       animation: reveal-rise both;
       animation-timeline: view();
-      animation-range: entry 0% entry 55%;
+      /* früh abschließen, damit Inhalte am Seitenende nicht halb-transparent „hängen" bleiben */
+      animation-range: entry 0% entry 40%;
     }
   }
 }

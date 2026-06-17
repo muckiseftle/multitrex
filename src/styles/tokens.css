@@ -11,8 +11,8 @@
   --color-space-700: #1b2540; /* Borders, Trennlinien */
 
   --color-star-100: #e8edf7; /* Primärtext — kühles Weiß */
-  --color-star-400: #8b97b5; /* Sekundärtext, Labels */
-  --color-star-600: #56617d; /* gedämpfte Meta-Texte */
+  --color-star-400: #aab5d0; /* Sekundärtext, Labels — aufgehellt für Lesbarkeit */
+  --color-star-600: #828ea8; /* gedämpfte Meta-Texte — erfüllt jetzt WCAG-AA-Kontrast */
 
   --color-accent: #6fe3ff; /* „Ion-Cyan" — Links, CTAs, HUD */
   --color-accent-dim: #3ba8c4; /* Cyan abgedunkelt für Flächen */
