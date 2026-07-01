@@ -136,6 +136,31 @@ function makeGlowTexture(): THREE.Texture {
   return tex;
 }
 
+/** Glatter radialer Glow (ohne Rauschen) — für Komet-Koma, beliebige Farbe */
+function makeSmoothGlow(r: number, g: number, b: number): THREE.Texture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  const stops: [number, number][] = [
+    [0.0, 1.0],
+    [0.12, 0.78],
+    [0.25, 0.52],
+    [0.4, 0.3],
+    [0.55, 0.16],
+    [0.7, 0.07],
+    [0.85, 0.02],
+    [1.0, 0.0],
+  ];
+  for (const [p, a] of stops) grad.addColorStop(p, `rgba(${r},${g},${b},${a})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /* ------------------------------------------------------------------ */
 
 export class SolarScene {
@@ -169,6 +194,8 @@ export class SolarScene {
   private extras: THREE.Mesh[] = [];
   private belt?: THREE.Points;
   private comet?: THREE.Group;
+  /** Soft-Points-Materialien (für Focal/DPR-Update bei Resize) */
+  private softMats: THREE.ShaderMaterial[] = [];
 
   /** Hover-Erkennung (Raycasting) für die Namens-Callouts */
   private raycaster = new THREE.Raycaster();
@@ -205,7 +232,7 @@ export class SolarScene {
     this.queue = this.buildPlanets(tier);
     this.buildMoons(tier);
     this.buildBeltAndDwarfs(tier);
-    this.buildComet();
+    this.buildComet(tier);
   }
 
   /* ---------------- Aufbau ---------------- */
@@ -390,31 +417,86 @@ export class SolarScene {
     });
   }
 
-  /** Asteroidengürtel (Punktwolke zwischen Mars und Jupiter) + Zwergplaneten */
+  /**
+   * Soft-Points-Material: runde, weiche, hochaufgelöste Partikel (kein
+   * quadratisches Standard-gl_Point). aSize in Welt-Einheiten, aColor, aAlpha.
+   */
+  private softPointsMaterial(additive: boolean, core = 0): THREE.ShaderMaterial {
+    const focal = (0.5 * innerHeight) / Math.tan((this.camera.fov * Math.PI) / 360);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uFocal: { value: focal },
+        uPixelRatio: { value: this.renderer.getPixelRatio() },
+        uCore: { value: core },
+      },
+      vertexShader: /* glsl */ `
+        attribute float aSize;
+        attribute vec3 aColor;
+        attribute float aAlpha;
+        uniform float uFocal;
+        uniform float uPixelRatio;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          float dist = max(-mv.z, 0.001);
+          gl_PointSize = clamp(aSize * uFocal * uPixelRatio / dist, 1.0, 260.0);
+          vColor = aColor;
+          vAlpha = aAlpha;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uCore;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float edge = smoothstep(0.5, 0.0, d);        // weiche runde Kante (AA)
+          float coreGlow = smoothstep(0.5, 0.06, d) * uCore;
+          gl_FragColor = vec4(vColor + coreGlow, edge * edge * vAlpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    });
+    this.softMats.push(mat);
+    return mat;
+  }
+
+  /** Asteroidengürtel (runde Partikel zwischen Mars und Jupiter) + Zwergplaneten */
   private buildBeltAndDwarfs(tier: DeviceTier) {
     const marsZ = PLANET_VISUALS.find((p) => p.id === 'mars')!.z;
     const jupZ = PLANET_VISUALS.find((p) => p.id === 'jupiter')!.z;
     const neptunZ = PLANET_VISUALS.find((p) => p.id === 'neptun')!.z;
     const beltZ = (marsZ + jupZ) / 2;
 
-    const count = tier === 'high' ? 1500 : 650;
+    const count = tier === 'high' ? 2600 : 1100;
     const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    const alphas = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 74;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 2] = beltZ + (Math.random() - 0.5) * 46;
+      positions[i * 3] = (Math.random() - 0.5) * 80;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 44;
+      positions[i * 3 + 2] = beltZ + (Math.random() - 0.5) * 52;
+      // meist kleine Brocken, wenige größere Felsen
+      const r = Math.random();
+      sizes[i] = r < 0.9 ? 0.07 + Math.random() * 0.16 : 0.28 + Math.random() * 0.55;
+      // Gesteinsfarben (grau-braun, leicht variiert)
+      const base = 0.4 + Math.random() * 0.3;
+      colors[i * 3] = base * (0.82 + Math.random() * 0.25);
+      colors[i * 3 + 1] = base * (0.72 + Math.random() * 0.18);
+      colors[i * 3 + 2] = base * (0.58 + Math.random() * 0.16);
+      alphas[i] = 0.55 + Math.random() * 0.45;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({
-      color: 0x9a8064,
-      size: 0.6,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.85,
-      depthWrite: false,
-    });
-    this.belt = new THREE.Points(geo, mat);
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
+    this.belt = new THREE.Points(geo, this.softPointsMaterial(false));
     this.scene.add(this.belt);
 
     // Zwergplaneten: Ceres (im Gürtel), Pluto (jenseits des Neptun)
@@ -433,7 +515,7 @@ export class SolarScene {
   }
 
   /** Komet mit leuchtendem Kern, Koma und Schweif (weg von der Sonne) */
-  private buildComet() {
+  private buildComet(tier: DeviceTier) {
     const satZ = PLANET_VISUALS.find((p) => p.id === 'saturn')!.z;
     const uraZ = PLANET_VISUALS.find((p) => p.id === 'uranus')!.z;
     const pos = new THREE.Vector3(-15, 7, (satZ + uraZ) / 2);
@@ -450,35 +532,48 @@ export class SolarScene {
         roughness: 1,
       })
     );
-    nucleus.scale.setScalar(0.32);
+    nucleus.scale.setScalar(0.34);
     nucleus.userData.callout = { name: 'Komet', type: 'Eiskörper' };
     group.add(nucleus);
     this.extras.push(nucleus);
 
-    // Koma-Glow
-    const coma = new THREE.Sprite(
+    // Koma: großer weicher Halo + heller Kern-Glow (glatte Texturen)
+    const halo = new THREE.Sprite(
       new THREE.SpriteMaterial({
-        map: makeGlowTexture(),
-        color: 0xaad4ff,
+        map: makeSmoothGlow(150, 200, 255),
         blending: THREE.AdditiveBlending,
         transparent: true,
         depthWrite: false,
-        opacity: 0.75,
+        opacity: 0.85,
       })
     );
-    coma.scale.setScalar(3.4);
-    group.add(coma);
+    halo.scale.setScalar(5.2);
+    group.add(halo);
+    const core = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: makeSmoothGlow(225, 240, 255),
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        opacity: 0.95,
+      })
+    );
+    core.scale.setScalar(1.8);
+    group.add(core);
 
-    // Schweif als Punktstrom, weg von der Sonne
+    // Schweif: runde, weiche Partikel — hell am Kopf, sanft zum Ende ausfadend
     const away = pos.clone().sub(new THREE.Vector3(SUN_POS.x, SUN_POS.y, SUN_POS.z)).normalize();
     const perpA = new THREE.Vector3().crossVectors(away, new THREE.Vector3(0, 1, 0)).normalize();
     const perpB = new THREE.Vector3().crossVectors(away, perpA).normalize();
-    const N = 160;
+    const N = tier === 'high' ? 520 : 240;
+    const tailLen = 28;
     const tp = new Float32Array(N * 3);
-    const tailLen = 24;
+    const ts = new Float32Array(N);
+    const tc = new Float32Array(N * 3);
+    const ta = new Float32Array(N);
     for (let i = 0; i < N; i++) {
-      const t = i / N;
-      const spread = (0.3 + t * 2.6) * (Math.random() * 0.8 + 0.2);
+      const t = Math.pow(Math.random(), 0.7); // dichter am Kopf
+      const spread = (0.25 + t * 3.4) * (Math.random() * 0.7 + 0.3);
       const ang = Math.random() * Math.PI * 2;
       const p = away
         .clone()
@@ -488,22 +583,19 @@ export class SolarScene {
       tp[i * 3] = p.x;
       tp[i * 3 + 1] = p.y;
       tp[i * 3 + 2] = p.z;
+      ts[i] = (0.5 + t * 1.6) * (0.7 + Math.random() * 0.6);
+      ta[i] = Math.pow(1 - t, 1.5) * (0.45 + Math.random() * 0.45);
+      // Kopf weiß-bläulich, Ende kühles Blau
+      tc[i * 3] = 0.55 + (1 - t) * 0.4;
+      tc[i * 3 + 1] = 0.75 + (1 - t) * 0.22;
+      tc[i * 3 + 2] = 1.0;
     }
     const tailGeo = new THREE.BufferGeometry();
     tailGeo.setAttribute('position', new THREE.BufferAttribute(tp, 3));
-    const tail = new THREE.Points(
-      tailGeo,
-      new THREE.PointsMaterial({
-        color: 0x9fd0ff,
-        size: 1.3,
-        sizeAttenuation: true,
-        transparent: true,
-        opacity: 0.5,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    group.add(tail);
+    tailGeo.setAttribute('aSize', new THREE.BufferAttribute(ts, 1));
+    tailGeo.setAttribute('aColor', new THREE.BufferAttribute(tc, 3));
+    tailGeo.setAttribute('aAlpha', new THREE.BufferAttribute(ta, 1));
+    group.add(new THREE.Points(tailGeo, this.softPointsMaterial(true, 0.4)));
 
     this.comet = group;
     this.scene.add(group);
@@ -626,6 +718,12 @@ export class SolarScene {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
+    // Partikelgröße hängt von Viewport-Höhe + DPR ab
+    const focal = (0.5 * innerHeight) / Math.tan((this.camera.fov * Math.PI) / 360);
+    for (const m of this.softMats) {
+      m.uniforms.uFocal!.value = focal;
+      m.uniforms.uPixelRatio!.value = this.renderer.getPixelRatio();
+    }
   }
 
   /* ---------------- Hover / Namens-Callout ---------------- */
