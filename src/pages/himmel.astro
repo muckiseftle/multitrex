@@ -196,29 +196,13 @@ import Base from '../layouts/Base.astro';
   .planet-list :global(.planet:hover) {
     border-color: var(--color-accent-dim);
   }
-  /* Planeten-Orb: kleine 3D-anmutende Kugel in der Planetenfarbe */
-  .planet-list :global(.planet__orb) {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.55), transparent 42%),
-      radial-gradient(circle at 70% 75%, rgb(0 0 0 / 0.45), transparent 60%),
-      var(--tint, #888);
-    box-shadow: inset 0 0 6px rgb(0 0 0 / 0.4);
-  }
-  .planet-list :global(.planet--ring .planet__orb::after) {
-    /* Saturn-Ring-Andeutung */
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 40px;
-    height: 13px;
-    transform: translate(-50%, -50%) rotate(-18deg);
-    border: 1px solid rgb(217 192 143 / 0.75);
-    border-radius: 50%;
+  /* Hochauflösendes Planeten-Porträt (aus den Texturen vorgerendert) */
+  .planet-list :global(.planet__img) {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    flex: none;
+    filter: drop-shadow(0 2px 7px rgb(0 0 0 / 0.55));
   }
   .planet-list :global(.planet__name) {
     font-family: var(--font-display);
@@ -279,14 +263,6 @@ import Base from '../layouts/Base.astro';
     ? import.meta.env.BASE_URL.slice(0, -1)
     : import.meta.env.BASE_URL;
 
-  const TINT: Record<string, string> = {
-    merkur: '#9c8e82',
-    venus: '#e6c89c',
-    mars: '#c1623b',
-    jupiter: '#cda77c',
-    saturn: '#d9c08f',
-  };
-
   const fmtDate = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'long' });
   const fmtDateTime = new Intl.DateTimeFormat('de-DE', {
     weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
@@ -311,7 +287,7 @@ import Base from '../layouts/Base.astro';
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 20);
-      camera.position.z = 3.4;
+      camera.position.z = 4.6; // weit genug zurück -> Mond wird vollständig gezeigt
 
       const tex = await new THREE.TextureLoader().loadAsync(`${base}/textures/2k/mond.webp`);
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -410,8 +386,8 @@ import Base from '../layouts/Base.astro';
       planets.sort((a, b) => rank[a.state] - rank[b.state]);
       list.innerHTML = planets
         .map(
-          (p) => `<li class="planet${p.id === 'saturn' ? ' planet--ring' : ''}">
-            <span class="planet__orb" style="--tint:${TINT[p.id] ?? '#888'}"></span>
+          (p) => `<li class="planet">
+            <img class="planet__img" src="${base}/planets/${p.id}.webp" alt="${p.name}" width="46" height="46" loading="lazy" decoding="async" />
             <span class="planet__name">${p.name}</span>
             <span class="planet__state" data-vis="${p.state}">${stateLabel(p.state)}</span>
           </li>`
