@@ -1,6 +1,6 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { PLANET_VISUALS, STATION_GAP } from './config';
+import { PLANET_VISUALS, STATION_GAP, passWaypoints } from './config';
 import type { SolarScene } from './scene';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -49,30 +49,26 @@ export function buildTimeline(scene: SolarScene, journeyEl: HTMLElement) {
     );
 
     const mobile = innerWidth < 700;
-    // Orbit-Pose (Höhe = viewDist) als Ziel des Anflugs — verbindet nahtlos
-    // mit dem folgenden Tiefflug (dessen s=0 dieselbe Pose ist).
-    const e0 = scene.flyCamLook(v.id, 0, mobile);
+    const wp = passWaypoints(v, mobile);
 
-    // Anflug: aus der Ferne zur Orbit-Höhe über dem Planeten
-    tl.to(cam, { x: e0.cam.x, y: e0.cam.y, z: e0.cam.z, duration: arrive - prevDepart }, prevDepart);
-    tl.to(look, { x: e0.look.x, y: e0.look.y, z: e0.look.z, duration: arrive - prevDepart }, prevDepart);
+    // Transit: von der vorigen Ausflug-Pose zum Einflug-Wegpunkt dieses
+    // Planeten. Der Blick schwenkt schon auf den kommenden Planeten.
+    tl.to(cam, { x: wp.entry.x, y: wp.entry.y, z: wp.entry.z, duration: arrive - prevDepart }, prevDepart);
+    tl.to(look, { x: wp.entryLook.x, y: wp.entryLook.y, z: wp.entryLook.z, duration: arrive - prevDepart }, prevDepart);
 
-    // Tiefflug: hinab zur Oberfläche, dicht darüber hinweg, wieder heraus.
-    // Ein Proxy scrubbt s=0..1; die Pose kommt aus scene.flyCamLook().
-    const fly = { s: 0 };
-    tl.to(
-      fly,
-      {
-        s: 1,
-        duration: depart - arrive,
-        onUpdate: () => {
-          const r = scene.flyCamLook(v.id, fly.s, mobile);
-          cam.copy(r.cam);
-          look.copy(r.look);
-        },
-      },
-      arrive
-    );
+    // Durchflug: Einflug -> (Apex) -> Ausflug, immer vorwärts.
+    // Bei Über-den-Planeten-Flügen bogt die Kamera über den Scheitelpunkt.
+    const passDur = depart - arrive;
+    if (wp.mid && wp.midLook) {
+      const half = passDur / 2;
+      tl.to(cam, { x: wp.mid.x, y: wp.mid.y, z: wp.mid.z, duration: half }, arrive);
+      tl.to(look, { x: wp.midLook.x, y: wp.midLook.y, z: wp.midLook.z, duration: half }, arrive);
+      tl.to(cam, { x: wp.exit.x, y: wp.exit.y, z: wp.exit.z, duration: half }, arrive + half);
+      tl.to(look, { x: wp.exitLook.x, y: wp.exitLook.y, z: wp.exitLook.z, duration: half }, arrive + half);
+    } else {
+      tl.to(cam, { x: wp.exit.x, y: wp.exit.y, z: wp.exit.z, duration: passDur }, arrive);
+      tl.to(look, { x: wp.exitLook.x, y: wp.exitLook.y, z: wp.exitLook.z, duration: passDur }, arrive);
+    }
 
     prevDepart = depart;
   }

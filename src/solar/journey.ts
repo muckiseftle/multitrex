@@ -162,7 +162,7 @@ async function init3D(journey: HTMLElement) {
       void scene.queue.load(which);
       const sVal = parseFloat(params.get('s') ?? '0.5');
       const paint = () => {
-        if (fly) scene.flyPose(fly, sVal);
+        if (fly) scene.debugPass(fly, sVal);
         else scene.debugPose(pose!);
         requestAnimationFrame(paint);
       };
