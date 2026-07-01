@@ -724,6 +724,18 @@ export class SolarScene {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /**
+   * GPU aufwärmen: alle Shader-Programme kompilieren und Texturen hochladen,
+   * damit später beim Scrollen nichts nachladen/kompilieren muss (kein Ruckeln).
+   * Macht dazu kurz alle Planeten sichtbar (der Cull-Ticker korrigiert danach).
+   */
+  warmup() {
+    for (const m of this.planets.values()) m.visible = true;
+    this.renderer.compile(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
+    for (const m of this.planets.values()) m.visible = false;
+  }
+
   resize() {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();

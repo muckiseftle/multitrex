@@ -22,6 +22,24 @@ const fmt = new Intl.NumberFormat('de-DE');
   noStarfield
 >
   <div id="journey" data-journey>
+    <!-- Ladeanimation: fliegender Komet + echter Fortschritt. Solange wird die
+         Szene vorgeladen und die GPU aufgewärmt -> danach keine Ruckler. -->
+    <div class="loader" id="solar-loader">
+      <div class="loader__sky" aria-hidden="true">
+        <div class="loader__comet">
+          <span class="loader__tail"></span>
+          <span class="loader__head"></span>
+        </div>
+      </div>
+      <div class="loader__info">
+        <p class="label label--accent">Unser Sonnensystem</p>
+        <div class="loader__bar" role="progressbar" aria-label="Ladefortschritt" aria-valuemin="0" aria-valuemax="100">
+          <span class="loader__fill" data-loader-fill></span>
+        </div>
+        <p class="loader__status label"><span data-loader-pct>0</span> % · wird gerendert</p>
+      </div>
+    </div>
+
     <!-- Fixierter WebGL-Canvas — wird per JS erzeugt, sobald bereit.
          Bis dahin (und als Fallback) trägt das CSS-Sonnenglühen die Szene. -->
     <div class="stage" aria-hidden="true">
@@ -175,6 +193,124 @@ const fmt = new Intl.NumberFormat('de-DE');
     position: relative;
     /* Sicherheitsnetz: nichts darf horizontales Scrollen auslösen */
     overflow-x: clip;
+  }
+
+  /* ---------- Ladeanimation (fliegender Komet) ---------- */
+  .loader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-5);
+    background:
+      radial-gradient(circle at 50% 46%, rgb(17 24 49 / 0.6) 0%, transparent 55%),
+      var(--color-space-950);
+    opacity: 1;
+    transition: opacity 0.7s var(--ease-out);
+  }
+  .loader.is-done {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .loader__sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Komet fliegt diagonal durchs Bild, Schweif zieht nach */
+  .loader__comet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    animation: comet-fly 2.6s var(--ease-out) infinite;
+  }
+  .loader__head {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, var(--color-accent) 55%, transparent 72%);
+    box-shadow:
+      0 0 14px 3px rgb(111 227 255 / 0.7),
+      0 0 34px 10px rgb(111 227 255 / 0.28);
+    transform: translate(-50%, -50%);
+  }
+  .loader__tail {
+    position: absolute;
+    right: 6px;
+    top: -1.5px;
+    width: 170px;
+    height: 3px;
+    transform-origin: right center;
+    transform: translateX(0);
+    border-radius: 3px;
+    background: linear-gradient(
+      to left,
+      rgb(111 227 255 / 0.85),
+      rgb(111 227 255 / 0.35) 35%,
+      rgb(111 227 255 / 0) 100%
+    );
+    filter: blur(0.4px);
+  }
+
+  @keyframes comet-fly {
+    0% {
+      transform: translate(-16vw, 74vh) rotate(-22deg);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    88% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(116vw, 20vh) rotate(-22deg);
+      opacity: 0;
+    }
+  }
+
+  .loader__info {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: var(--space-3);
+    text-align: center;
+  }
+  .loader__bar {
+    width: min(62vw, 320px);
+    height: 2px;
+    background: var(--color-space-700);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .loader__fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-accent-warm), var(--color-accent));
+    box-shadow: 0 0 12px rgb(111 227 255 / 0.5);
+    transition: width 0.25s var(--ease-out);
+  }
+  .loader__status {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loader__comet {
+      animation: none;
+    }
+    .loader {
+      transition: none;
+    }
   }
 
   /* ---------- Stage: Canvas + CSS-Glow ---------- */

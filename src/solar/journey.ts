@@ -20,12 +20,31 @@ export function initJourney() {
   initRail(reducedMotion);
 
   if (reducedMotion || !supportsWebGL()) {
-    // statischer Pfad: nichts verstecken, nichts animieren — Inhalt steht ja im HTML
+    // statischer Pfad: kein 3D -> Loader sofort ausblenden
+    hideLoader();
     return;
   }
 
   initOverlays();
   void init3D(journey);
+}
+
+/** Ladeanimation ausblenden und aus dem DOM nehmen */
+function hideLoader() {
+  const loader = document.getElementById('solar-loader');
+  if (!loader) return;
+  loader.classList.add('is-done');
+  setTimeout(() => loader.remove(), 750);
+}
+
+function setLoaderProgress(p: number) {
+  const pct = Math.round(Math.min(1, Math.max(0, p)) * 100);
+  const fill = document.querySelector<HTMLElement>('[data-loader-fill]');
+  const label = document.querySelector<HTMLElement>('[data-loader-pct]');
+  const bar = document.querySelector<HTMLElement>('.loader__bar');
+  if (fill) fill.style.width = `${pct}%`;
+  if (label) label.textContent = String(pct);
+  bar?.setAttribute('aria-valuenow', String(pct));
 }
 
 /* ---------------- Sprungleiste: aktive Station + sanfte Sprünge ---------------- */
@@ -247,6 +266,7 @@ async function init3D(journey: HTMLElement) {
       timeline.scrollTrigger?.disable();
       timeline.pause();
       stage.setAttribute('data-3d-ready', '');
+      hideLoader();
       void scene.queue.load(which);
       const sVal = parseFloat(params.get('s') ?? '0.5');
       const calloutId = params.get('callout');
@@ -266,14 +286,44 @@ async function init3D(journey: HTMLElement) {
     }
   }
 
-  /* Canvas erst überblenden, wenn die erste Planeten-Textur da ist —
-     bis dahin trägt das CSS-Sonnenglühen. „Nichts von Ladezeiten merken." */
-  try {
-    await scene.queue.load('merkur');
-  } catch {
-    /* Textur fehlgeschlagen? Tint-Farben reichen auch. */
+  /* Ladeanimation: ALLE kritischen Texturen vorladen (mit Fortschritt), dann
+     die GPU aufwärmen (Shader kompilieren + Texturen hochladen). Erst danach
+     Loader ausblenden -> die Reise läuft von der ersten Sekunde an flüssig. */
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('holdloader')) {
+    setLoaderProgress(0.5); // Loader für Screenshots eingefroren zeigen
+    return;
   }
-  requestAnimationFrame(() => stage.setAttribute('data-3d-ready', ''));
+  const assets = [
+    'merkur', 'venus', 'erde', 'mars', 'jupiter', 'saturn', 'uranus', 'neptun',
+    'mond', 'saturn-ring', 'erde-wolken', 'erde-nacht',
+  ];
+  let loaded = 0;
+  setLoaderProgress(0);
+  const loads = assets.map((id) =>
+    scene.queue
+      .load(id)
+      .catch(() => {})
+      .finally(() => {
+        loaded += 1;
+        setLoaderProgress(loaded / assets.length);
+      })
+  );
+  // Sicherheitsnetz: nach spätestens 9 s trotzdem starten (langsames Netz)
+  await Promise.race([
+    Promise.allSettled(loads),
+    new Promise((r) => setTimeout(r, 9000)),
+  ]);
+
+  scene.warmup(); // Shader kompilieren + Texturen hochladen
+  setLoaderProgress(1);
+
+  // zwei Frames rendern, dann sanft überblenden
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      stage.setAttribute('data-3d-ready', '');
+      hideLoader();
+    })
+  );
 
   /* Deep-Link: /sonnensystem/#saturn öffnet direkt beim Planeten.
      Erst nach dem Reveal, damit die Sektions-Offsets final vermessen sind. */
