@@ -95,28 +95,33 @@ export function passWaypoints(v: PlanetVisual, mobile: boolean): PassWaypoints {
   const P: Vec3 = { x: v.x, y: 0, z: v.z };
   // Deutlich zurückversetzt -> Planet ~40 % Bildhöhe, viel Weltall drumherum
   const D = v.viewDist * (mobile ? 1.35 : 1.55);
-  // Panel-Seite: gerade Index -> Panel rechts -> Planet links (und umgekehrt)
-  const planetSide = v.index % 2 === 0 ? -1 : 1;
 
   if (mobile) {
-    // Bottom-Sheet: Planet mittig im oberen Bereich, ruhiger Seitendrift
-    const lookM = add(P, 0, R * 0.4, 0);
+    // Bottom-Sheet-Panel sitzt UNTEN -> Planet klar in die obere Bildhälfte.
+    // look unter den Planeten -> Planet erscheint oben (weg vom Panel).
+    const lookM = add(P, 0, -R * 1.5, 0);
     return {
-      entry: add(P, -R * 0.6, R * 0.2, D),
-      exit: add(P, R * 0.6, R * 0.2, D * 0.9),
+      entry: add(P, -R * 0.6, 0, D),
+      exit: add(P, R * 0.6, 0, D * 0.9),
       entryLook: lookM,
       exitLook: lookM,
     };
   }
 
-  // Planet auf die Panel-freie Bildseite; leichte Höhenvariation je Planet
-  const look = add(P, -planetSide * 1.6 * R, 0, 0);
-  const highCam = v.index % 2 === 0; // abwechselnd: Blick leicht von oben / von der Seite
-  const camY = highCam ? R * 0.7 : -R * 0.15;
-  const camX = planetSide * 0.4 * R;
+  // Panel-Seite folgt dem CSS (nth-of-type zählt die Sonnen-Sektion mit!):
+  // v.index gerade  -> Panel LINKS  -> Planet RECHTS (+1)
+  // v.index ungerade -> Panel RECHTS -> Planet LINKS  (-1)
+  const planetSide = v.index % 2 === 0 ? 1 : -1;
+
+  // Planet weit auf die Panel-freie Bildhälfte schieben: Blickziel auf die
+  // Panel-Seite versetzt -> Planet erscheint auf der Gegenseite, ohne Überlapp.
+  const look = add(P, -planetSide * 2.1 * R, 0, 0);
+  const highCam = v.index % 2 === 0; // Abwechslung: mal leicht von oben, mal seitlich
+  const camY = highCam ? R * 0.6 : -R * 0.1;
+  const camX = planetSide * 0.3 * R;
 
   // Sanfter Parallax: Kamera driftet nur wenig, Planet „atmet" langsam vorbei
-  const driftX = 1.1 * R;
+  const driftX = 1.0 * R;
   return {
     entry: add(P, camX - driftX, camY + R * 0.1, D),
     exit: add(P, camX + driftX, camY - R * 0.1, D * 0.92),
