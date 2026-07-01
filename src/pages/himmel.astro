@@ -4,186 +4,280 @@ import Base from '../layouts/Base.astro';
 
 <Base
   title="Himmel heute Nacht über dem Allgäu | Multitrex"
-  description="Aktuelle Mondphase, heute Nacht sichtbare Planeten und die nächste dunkle Neumond-Nacht — live im Browser berechnet, für Beobachter im Allgäu."
+  description="Aktuelle Mondphase in 3D, heute Nacht sichtbare Planeten und die nächste dunkle Neumond-Nacht — live im Browser berechnet, für Beobachter im Allgäu."
 >
   <section class="sky container">
     <header class="sky__head reveal">
       <p class="label label--accent">Live berechnet · 47.7° N · 10.3° O</p>
       <h1>Der Himmel heute Nacht.</h1>
-      <p class="sky__lead">
-        Alles hier wird direkt in deinem Browser aus Bahndaten berechnet —
-        keine Server, keine Cookies. Ein kleiner Blick nach oben, bevor du
-        selbst rausgehst.
-      </p>
     </header>
 
     <div class="sky__grid">
-      <!-- Mond -->
-      <article class="card card--moon reveal">
-        <p class="label label--accent">Mond</p>
-        <div class="moon">
-          <canvas id="moon-canvas" width="240" height="240" aria-hidden="true"></canvas>
-          <div class="moon__meta">
-            <p class="moon__name" data-moon-name>—</p>
-            <dl class="moon__data">
-              <div><dt class="label">Beleuchtet</dt><dd data-moon-illum>—</dd></div>
-              <div><dt class="label">Mondalter</dt><dd data-moon-age>—</dd></div>
-              <div><dt class="label">Nächster Neumond</dt><dd data-moon-new>—</dd></div>
-              <div><dt class="label">Nächster Vollmond</dt><dd data-moon-full>—</dd></div>
-            </dl>
+      <!-- ============ MOND (3D) ============ -->
+      <article class="card moon-card reveal">
+        <div class="moon-card__stage">
+          <div class="moon-viewer">
+            <canvas id="moon-canvas" aria-label="Aktuelle Mondphase in 3D"></canvas>
+          </div>
+          <div class="moon-card__head">
+            <p class="label label--accent">Mond heute</p>
+            <p class="moon-phase" data-moon-name>—</p>
+            <p class="moon-illum"><span data-moon-illum>—</span> beleuchtet</p>
           </div>
         </div>
-        <p class="card__foot label" data-moon-tip>—</p>
-      </article>
 
-      <!-- Planeten -->
-      <article class="card card--planets reveal">
-        <p class="label label--accent">Planeten heute Nacht</p>
-        <ul class="planets" data-planets>
-          <li class="planets__loading label">Berechne …</li>
-        </ul>
-        <p class="card__foot label">
-          Mit bloßem Auge · Sichtbarkeit variiert mit Horizont und Wetter
+        <dl class="moon-stats">
+          <div><dt class="label">Mondalter</dt><dd data-moon-age>—</dd></div>
+          <div><dt class="label">Nächster Neumond</dt><dd data-moon-new>—</dd></div>
+          <div><dt class="label">Nächster Vollmond</dt><dd data-moon-full>—</dd></div>
+        </dl>
+
+        <p class="moon-tip">
+          <span class="label label--warm">Tipp</span>
+          <span data-moon-tip>—</span>
         </p>
       </article>
-    </div>
 
-    <p class="sky__note label" data-updated></p>
+      <!-- ============ PLANETEN ============ -->
+      <article class="card planets-card reveal">
+        <header class="planets-card__head">
+          <p class="label label--accent">Planeten heute Nacht</p>
+          <p class="planets-card__sub label">Mit bloßem Auge sichtbar</p>
+        </header>
+
+        <ul class="planet-list" data-planets>
+          <li class="planet-list__loading label">Berechne Positionen …</li>
+        </ul>
+
+        <p class="planets-card__foot label" data-updated>—</p>
+      </article>
+    </div>
   </section>
 </Base>
 
 <style>
   .sky {
-    padding: var(--space-6) 0 var(--space-5);
+    padding: var(--space-6) 0 var(--space-6);
   }
   .sky__head {
-    max-width: 60ch;
-    margin-bottom: var(--space-6);
+    margin-bottom: var(--space-5);
   }
   .sky__head h1 {
     margin-top: var(--space-2);
   }
-  .sky__lead {
-    color: var(--color-star-400);
-  }
 
   .sky__grid {
     display: grid;
-    grid-template-columns: 1.15fr 0.85fr;
+    grid-template-columns: 1.1fr 0.9fr;
     gap: var(--space-4);
-    align-items: start;
+    align-items: stretch;
   }
 
   .card {
     border: var(--border-fine);
     border-radius: var(--radius-md);
-    background: var(--color-space-900);
+    background:
+      radial-gradient(120% 120% at 100% 0%, rgb(17 24 49 / 0.5) 0%, transparent 60%),
+      var(--color-space-900);
     padding: var(--space-4);
   }
-  .card__foot {
-    margin-top: var(--space-4);
-    border-top: 1px solid rgb(27 37 64 / 0.6);
-    padding-top: var(--space-3);
-  }
 
-  /* Mond */
-  .moon {
-    display: flex;
+  /* ---------- Mond-Karte ---------- */
+  .moon-card {
+    display: grid;
+    align-content: start;
     gap: var(--space-4);
+  }
+  .moon-card__stage {
+    display: flex;
     align-items: center;
-    margin-top: var(--space-3);
+    gap: var(--space-4);
+  }
+  .moon-viewer {
+    position: relative;
+    flex: none;
+    width: 160px;
+    height: 160px;
+    filter: drop-shadow(0 0 30px rgb(111 227 255 / 0.1));
+  }
+  .moon-viewer::before {
+    /* dezenter Halo hinter dem Mond */
+    content: '';
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(140 160 200 / 0.14), transparent 70%);
   }
   #moon-canvas {
-    width: 140px;
-    height: 140px;
-    flex: none;
-    filter: drop-shadow(0 0 22px rgb(111 227 255 / 0.12));
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
   }
-  .moon__name {
+  .moon-phase {
     font-family: var(--font-display);
     font-size: var(--text-xl);
-    margin: 0 0 var(--space-2);
+    line-height: 1.1;
+    margin: var(--space-2) 0 var(--space-1);
   }
-  .moon__data {
-    margin: 0;
-    display: grid;
-    gap: var(--space-2);
-  }
-  .moon__data dd {
-    margin: 1px 0 0;
+  .moon-illum {
     font-family: var(--font-mono);
+    color: var(--color-star-400);
     font-variant-numeric: tabular-nums;
-    color: var(--color-star-100);
+    margin: 0;
   }
 
-  /* Planeten */
-  .planets {
-    list-style: none;
-    margin: var(--space-3) 0 0;
-    padding: 0;
+  .moon-stats {
     display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1px;
+    margin: 0;
     background: var(--color-space-700);
     border: var(--border-fine);
     border-radius: var(--radius-sm);
     overflow: hidden;
   }
-  .planets li {
+  .moon-stats > div {
     background: var(--color-space-900);
-    padding: 0.7rem var(--space-3);
+    padding: var(--space-3);
+  }
+  .moon-stats dd {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-star-100);
+    font-size: var(--text-sm);
+  }
+
+  .moon-tip {
+    margin: 0;
+    color: var(--color-star-400);
+  }
+  .moon-tip .label {
+    display: inline-block;
+    margin-right: var(--space-2);
+  }
+
+  /* ---------- Planeten-Karte ---------- */
+  .planets-card {
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+  }
+  .planets-card__head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
     gap: var(--space-3);
   }
-  .planets__name {
-    display: flex;
+
+  .planet-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .planet-list__loading {
+    padding: var(--space-3) 0;
+  }
+  /* Zeilen werden per JS injiziert -> :global, aber auf .planet-list begrenzt */
+  .planet-list :global(.planet) {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 0.6rem;
-    font-family: var(--font-display);
+    gap: var(--space-3);
+    padding: 0.7rem var(--space-3);
+    border: var(--border-fine);
+    border-radius: var(--radius-sm);
+    background: rgb(5 7 15 / 0.35);
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
-  .planets__dot {
-    width: 12px;
-    height: 12px;
+  .planet-list :global(.planet:hover) {
+    border-color: var(--color-accent-dim);
+  }
+  /* Planeten-Orb: kleine 3D-anmutende Kugel in der Planetenfarbe */
+  .planet-list :global(.planet__orb) {
+    position: relative;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    flex: none;
-    box-shadow: 0 0 10px currentColor;
+    background:
+      radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.55), transparent 42%),
+      radial-gradient(circle at 70% 75%, rgb(0 0 0 / 0.45), transparent 60%),
+      var(--tint, #888);
+    box-shadow: inset 0 0 6px rgb(0 0 0 / 0.4);
   }
-  .planets__state {
+  .planet-list :global(.planet--ring .planet__orb::after) {
+    /* Saturn-Ring-Andeutung */
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 40px;
+    height: 13px;
+    transform: translate(-50%, -50%) rotate(-18deg);
+    border: 1px solid rgb(217 192 143 / 0.75);
+    border-radius: 50%;
+  }
+  .planet-list :global(.planet__name) {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+  }
+  .planet-list :global(.planet__state) {
     font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    text-align: right;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    padding: 0.32em 0.7em;
+    border-radius: 999px;
+    border: 1px solid var(--color-space-700);
+    color: var(--color-star-400);
   }
-  .planets__state[data-vis='ganze-nacht'] {
+  .planet-list :global(.planet__state[data-vis='ganze-nacht']) {
     color: var(--color-accent);
+    border-color: rgb(111 227 255 / 0.5);
+    background: rgb(111 227 255 / 0.08);
   }
-  .planets__state[data-vis='abend'],
-  .planets__state[data-vis='morgen'] {
+  .planet-list :global(.planet__state[data-vis='abend']),
+  .planet-list :global(.planet__state[data-vis='morgen']) {
     color: var(--color-star-100);
+    border-color: var(--color-space-700);
   }
-  .planets__state[data-vis='nah-sonne'] {
+  .planet-list :global(.planet__state[data-vis='nah-sonne']) {
     color: var(--color-star-600);
+    border-color: transparent;
   }
 
-  .sky__note {
-    margin-top: var(--space-5);
+  .planets-card__foot {
+    margin-top: var(--space-2);
+    border-top: 1px solid rgb(27 37 64 / 0.6);
+    padding-top: var(--space-3);
   }
 
-  @media (max-width: 800px) {
+  @media (max-width: 820px) {
     .sky__grid {
       grid-template-columns: 1fr;
     }
   }
-  @media (max-width: 460px) {
-    .moon {
+  @media (max-width: 420px) {
+    .moon-card__stage {
       flex-direction: column;
       align-items: flex-start;
+    }
+    .moon-stats {
+      grid-template-columns: 1fr;
     }
   }
 </style>
 
 <script>
   import { moonInfo, planetVisibility, stateLabel } from '../lib/sky';
+
+  const base = import.meta.env.BASE_URL.endsWith('/')
+    ? import.meta.env.BASE_URL.slice(0, -1)
+    : import.meta.env.BASE_URL;
 
   const TINT: Record<string, string> = {
     merkur: '#9c8e82',
@@ -195,19 +289,74 @@ import Base from '../layouts/Base.astro';
 
   const fmtDate = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'long' });
   const fmtDateTime = new Intl.DateTimeFormat('de-DE', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
+    weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
   });
 
-  /** Mondscheibe mit korrekter Phase zeichnen (Terminator als Halb-Ellipse) */
-  function drawMoon(canvas: HTMLCanvasElement, theta: number) {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const set = (sel: string, text: string) => {
+    const el = document.querySelector(sel);
+    if (el) el.textContent = text;
+  };
+
+  /* ---------------- 3D-Mond ---------------- */
+  async function init3DMoon(phaseAngleDeg: number): Promise<boolean> {
+    const canvas = document.getElementById('moon-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return false;
+    try {
+      const THREE = await import('three');
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const size = 160;
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(size, size, false);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 20);
+      camera.position.z = 3.4;
+
+      const tex = await new THREE.TextureLoader().loadAsync(`${base}/textures/2k/mond.webp`);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      const moon = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 96, 64),
+        new THREE.MeshStandardMaterial({
+          map: tex,
+          bumpMap: tex,
+          bumpScale: 2,
+          roughness: 1,
+          metalness: 0,
+          dithering: true,
+        })
+      );
+      moon.rotation.y = -Math.PI / 2; // erdzugewandte Seite zur Kamera
+      scene.add(moon);
+
+      // Sonnenlicht aus dem der Phase entsprechenden Winkel -> korrekte Sichel
+      const t = (phaseAngleDeg * Math.PI) / 180;
+      const light = new THREE.DirectionalLight(0xfff6e8, 2.6);
+      light.position.set(Math.sin(t), 0, -Math.cos(t)).multiplyScalar(5);
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x2a3550, 0.05)); // Hauch Erdschein
+
+      const render = () => {
+        moon.rotation.y += 0.0016; // sehr langsame Libration -> lebendig
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+      };
+      render();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Fallback (kein WebGL): einfache 2D-Mondscheibe */
+  function draw2DMoon(theta: number) {
+    const canvas = document.getElementById('moon-canvas') as HTMLCanvasElement | null;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const size = 240;
+    const size = 160;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
@@ -216,61 +365,37 @@ import Base from '../layouts/Base.astro';
     const cy = size / 2;
     const rad = (theta * Math.PI) / 180;
     const waxing = theta < 180;
-    const gibbous = Math.cos(rad) < 0; // beleuchtet > 50 %
-
-    // dunkle Scheibe
+    const gibbous = Math.cos(rad) < 0;
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.fillStyle = '#0b1020';
     ctx.fill();
-
-    // beleuchteter Bereich
     ctx.beginPath();
     ctx.arc(cx, cy, R, -Math.PI / 2, Math.PI / 2, !waxing);
-    const rx = Math.abs(R * Math.cos(rad));
-    ctx.ellipse(cx, cy, rx, R, 0, Math.PI / 2, -Math.PI / 2, waxing ? !gibbous : gibbous);
+    ctx.ellipse(cx, cy, Math.abs(R * Math.cos(rad)), R, 0, Math.PI / 2, -Math.PI / 2, waxing ? !gibbous : gibbous);
     ctx.closePath();
-    const grad = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.35, R * 0.1, cx, cy, R);
-    grad.addColorStop(0, '#f2f4fa');
-    grad.addColorStop(1, '#c2c8d6');
-    ctx.fillStyle = grad;
+    ctx.fillStyle = '#cfd4de';
     ctx.fill();
-
-    // feiner Rand
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(111,227,255,0.18)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
   }
 
-  function render() {
+  function renderPage() {
     const now = new Date();
     const moon = moonInfo(now);
 
-    let theta = moon.phaseAngle;
-    if (import.meta.env.DEV) {
-      const p = new URLSearchParams(location.search).get('phase');
-      if (p !== null) theta = parseFloat(p);
-    }
-    const canvas = document.getElementById('moon-canvas') as HTMLCanvasElement | null;
-    if (canvas) drawMoon(canvas, theta);
+    void init3DMoon(moon.phaseAngle).then((ok) => {
+      if (!ok) draw2DMoon(moon.phaseAngle);
+    });
 
-    const set = (sel: string, text: string) => {
-      const el = document.querySelector(sel);
-      if (el) el.textContent = text;
-    };
     set('[data-moon-name]', moon.name);
     set('[data-moon-illum]', `${Math.round(moon.illum * 100)} %`);
     set('[data-moon-age]', `${moon.ageDays.toFixed(1)} Tage`);
     set('[data-moon-new]', fmtDate.format(moon.nextNewMoon));
     set('[data-moon-full]', fmtDate.format(moon.nextFullMoon));
 
-    // Tipp: Deep-Sky lohnt sich um Neumond, Mond-Fotografie um Vollmond
     const daysToNew = (moon.nextNewMoon.getTime() - now.getTime()) / 86400000;
     const tip =
       moon.illum < 0.15
-        ? 'Dunkler Himmel — ideal für Galaxien und Nebel.'
+        ? 'Dunkler Himmel — ideale Nächte für Galaxien und Nebel.'
         : daysToNew < 5
           ? `Bald Neumond (${fmtDate.format(moon.nextNewMoon)}) — beste Nächte für lichtschwache Objekte.`
           : moon.illum > 0.85
@@ -278,25 +403,24 @@ import Base from '../layouts/Base.astro';
             : `Nächste dunkle Nacht: um den ${fmtDate.format(moon.nextNewMoon)}.`;
     set('[data-moon-tip]', tip);
 
-    // Planeten
     const list = document.querySelector('[data-planets]');
     if (list) {
       const planets = planetVisibility(now);
-      // sichtbare zuerst
       const rank: Record<string, number> = { 'ganze-nacht': 0, abend: 1, morgen: 2, 'nah-sonne': 3 };
       planets.sort((a, b) => rank[a.state] - rank[b.state]);
       list.innerHTML = planets
         .map(
-          (p) => `<li>
-            <span class="planets__name"><span class="planets__dot" style="color:${TINT[p.id] ?? '#8b97b5'}"></span>${p.name}</span>
-            <span class="planets__state" data-vis="${p.state}">${stateLabel(p.state)}</span>
+          (p) => `<li class="planet${p.id === 'saturn' ? ' planet--ring' : ''}">
+            <span class="planet__orb" style="--tint:${TINT[p.id] ?? '#888'}"></span>
+            <span class="planet__name">${p.name}</span>
+            <span class="planet__state" data-vis="${p.state}">${stateLabel(p.state)}</span>
           </li>`
         )
         .join('');
     }
 
-    set('[data-updated]', `Berechnet für ${fmtDateTime.format(now)} · deine Ortszeit`);
+    set('[data-updated]', `Stand ${fmtDateTime.format(now)} · deine Ortszeit · abhängig von Horizont & Wetter`);
   }
 
-  render();
+  renderPage();
 </script>
