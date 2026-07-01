@@ -1,0 +1,426 @@
+---
+/**
+ * AR-Himmelsscanner (Beta): öffnet die Rückkamera, blendet über das Live-Bild
+ * die echten Positionen von Sonne, Mond und den hellen Planeten ein — Handy an
+ * den Himmel halten. Rein clientseitig (Kamera/Sensoren/Standort verlassen das
+ * Gerät nicht). Nur mobil mit Bewegungssensoren.
+ */
+---
+
+<button type="button" class="scanner-open" data-scanner-open>
+  <span class="scanner-open__icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+      <circle cx="12" cy="12" r="3.2" />
+    </svg>
+  </span>
+  <span class="scanner-open__text">
+    <span class="scanner-open__title">Himmels-Scanner öffnen</span>
+    <span class="label scanner-open__sub">Handy an den Himmel halten · Beta</span>
+  </span>
+  <span class="label label--accent scanner-open__go" aria-hidden="true">AR</span>
+</button>
+
+<div class="scanner" id="sky-scanner" hidden>
+  <video class="scanner__video" playsinline muted></video>
+  <canvas class="scanner__canvas"></canvas>
+
+  <div class="scanner__ui">
+    <div class="scanner__top">
+      <p class="label scanner__heading"><span data-scanner-heading>—</span></p>
+      <button type="button" class="scanner__close" data-scanner-close aria-label="Scanner schließen">✕</button>
+    </div>
+
+    <p class="scanner__status label" data-scanner-status></p>
+
+    <div class="scanner__bottom">
+      <p class="label scanner__hint">
+        Norden verschoben? Fein justieren:
+      </p>
+      <div class="scanner__calib">
+        <button type="button" class="scanner__cal" data-cal="-5">◀ West</button>
+        <button type="button" class="scanner__cal" data-cal="5">Ost ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .scanner-open {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-accent-dim);
+    border-radius: var(--radius-md);
+    background:
+      radial-gradient(120% 160% at 0% 0%, rgb(111 227 255 / 0.12), transparent 55%),
+      var(--color-space-900);
+    color: var(--color-star-100);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out);
+  }
+  .scanner-open:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--glow-accent);
+  }
+  .scanner-open__icon {
+    color: var(--color-accent);
+    flex: none;
+  }
+  .scanner-open__icon svg {
+    width: 30px;
+    height: 30px;
+  }
+  .scanner-open__text {
+    display: grid;
+    gap: 2px;
+    flex: 1;
+  }
+  .scanner-open__title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+  }
+  .scanner-open__go {
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 0.2em 0.6em;
+  }
+
+  /* Vollbild-Scanner */
+  .scanner {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: #000;
+    overflow: hidden;
+  }
+  .scanner[hidden] {
+    display: none;
+  }
+  .scanner__video,
+  .scanner__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .scanner__video {
+    object-fit: cover;
+  }
+  .scanner__canvas {
+    pointer-events: none;
+  }
+  .scanner__ui {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: max(env(safe-area-inset-top), 14px) 14px max(env(safe-area-inset-bottom), 14px);
+    pointer-events: none;
+  }
+  .scanner__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .scanner__heading {
+    background: rgb(5 7 15 / 0.6);
+    backdrop-filter: blur(6px);
+    padding: 0.4em 0.8em;
+    border-radius: 999px;
+    border: var(--border-fine);
+    letter-spacing: 0.14em;
+  }
+  .scanner__close {
+    pointer-events: auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: var(--border-fine);
+    background: rgb(5 7 15 / 0.6);
+    backdrop-filter: blur(6px);
+    color: var(--color-star-100);
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .scanner__status {
+    align-self: center;
+    text-align: center;
+    max-width: 30ch;
+    background: rgb(5 7 15 / 0.55);
+    padding: 0.5em 0.9em;
+    border-radius: var(--radius-sm);
+  }
+  .scanner__status:empty {
+    display: none;
+  }
+  .scanner__bottom {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-2);
+  }
+  .scanner__calib {
+    display: flex;
+    gap: var(--space-2);
+    pointer-events: auto;
+  }
+  .scanner__cal {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-star-100);
+    background: rgb(5 7 15 / 0.6);
+    backdrop-filter: blur(6px);
+    border: var(--border-fine);
+    border-radius: 999px;
+    padding: 0.5em 1em;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  import { horizontalPositions, type SkyBody } from '../lib/sky';
+
+  const ALLGAEU = { lat: 47.7, lon: 10.3 };
+  const COLORS: Record<string, string> = {
+    sonne: '#ffcf6b',
+    mond: '#d5dae6',
+    merkur: '#b7a894',
+    venus: '#f0d9a8',
+    mars: '#e0714a',
+    jupiter: '#e6c79a',
+    saturn: '#ecd9a3',
+  };
+  const DEG = Math.PI / 180;
+  const FOV_X = 62; // angenommenes horizontales Sichtfeld der Kamera (Grad)
+
+  const scanner = document.getElementById('sky-scanner');
+  const openBtn = document.querySelector<HTMLElement>('[data-scanner-open]');
+  if (scanner && openBtn) {
+    const video = scanner.querySelector<HTMLVideoElement>('.scanner__video')!;
+    const canvas = scanner.querySelector<HTMLCanvasElement>('.scanner__canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const statusEl = scanner.querySelector<HTMLElement>('[data-scanner-status]')!;
+    const headingEl = scanner.querySelector<HTMLElement>('[data-scanner-heading]')!;
+
+    let stream: MediaStream | null = null;
+    let orient: DeviceOrientationEvent | null = null;
+    let bodies: SkyBody[] = [];
+    let raf = 0;
+    let azOffset = 0;
+    let loc = { ...ALLGAEU };
+
+    const onOrient = (e: DeviceOrientationEvent) => (orient = e);
+    const status = (t: string) => (statusEl.textContent = t);
+
+    async function open() {
+      scanner!.hidden = false;
+      status('Sensoren werden gestartet …');
+
+      // iOS: Bewegungssensor-Freigabe (nur per Nutzergeste möglich)
+      try {
+        const D = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+        if (typeof D.requestPermission === 'function') {
+          const r = await D.requestPermission();
+          if (r !== 'granted') status('Bewegungssensor nicht freigegeben — Ausrichtung eingeschränkt.');
+        }
+      } catch {
+        /* ignorieren */
+      }
+      if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', onOrient as EventListener);
+      }
+      window.addEventListener('deviceorientation', onOrient);
+
+      // Kamera
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await video.play();
+        status('');
+      } catch {
+        status('Keine Kamera-Freigabe — der Scanner braucht die Kamera.');
+      }
+
+      // Standort (nur lokal genutzt), sonst Allgäu
+      navigator.geolocation?.getCurrentPosition(
+        (p) => {
+          loc = { lat: p.coords.latitude, lon: p.coords.longitude };
+          recompute();
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 600000 }
+      );
+
+      recompute();
+      resize();
+      loop();
+    }
+
+    function close() {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('deviceorientation', onOrient);
+      window.removeEventListener('deviceorientationabsolute', onOrient as EventListener);
+      stream?.getTracks().forEach((t) => t.stop());
+      stream = null;
+      scanner!.hidden = true;
+    }
+
+    function recompute() {
+      bodies = horizontalPositions(new Date(), loc.lat, loc.lon);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    const compass = (az: number) => {
+      const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+      return dirs[Math.round(az / 45) % 8];
+    };
+
+    function rotMatrix(e: DeviceOrientationEvent) {
+      let alpha = e.alpha ?? 0;
+      const anyE = e as unknown as { webkitCompassHeading?: number };
+      if (typeof anyE.webkitCompassHeading === 'number') alpha = 360 - anyE.webkitCompassHeading;
+      const a = alpha * DEG;
+      const b = (e.beta ?? 0) * DEG;
+      const g = (e.gamma ?? 0) * DEG;
+      const cA = Math.cos(a), sA = Math.sin(a);
+      const cB = Math.cos(b), sB = Math.sin(b);
+      const cG = Math.cos(g), sG = Math.sin(g);
+      // Gerät -> Welt (Ost, Nord, Oben), ZXY
+      return [
+        cA * cG - sA * sB * sG, -cB * sA, cA * sG + cG * sA * sB,
+        cG * sA + cA * sB * sG, cA * cB, sA * sG - cA * cG * sB,
+        -cB * sG, sB, cB * cG,
+      ];
+    }
+
+    function loop() {
+      raf = requestAnimationFrame(loop);
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      ctx.clearRect(0, 0, W, H);
+      if (!orient) {
+        return;
+      }
+      const R = rotMatrix(orient);
+      const focal = W / 2 / Math.tan((FOV_X / 2) * DEG);
+      const scrAngle = ((screen.orientation?.angle ?? 0) as number) * DEG;
+      const cs = Math.cos(scrAngle), sn = Math.sin(scrAngle);
+
+      // Blickrichtung (für Kompass): Geräte -Z in Welt
+      const lookAz = ((Math.atan2(-R[2], -R[5]) / DEG) + 360) % 360;
+      headingEl.textContent = `${compass(lookAz)} · ${Math.round(lookAz)}°`;
+
+      for (const bdy of bodies) {
+        const a = (bdy.az - azOffset) * DEG;
+        const el = bdy.alt * DEG;
+        const E = Math.sin(a) * Math.cos(el);
+        const N = Math.cos(a) * Math.cos(el);
+        const U = Math.sin(el);
+        // Welt -> Gerät (R^T)
+        let dx = E * R[0] + N * R[3] + U * R[6];
+        let dy = E * R[1] + N * R[4] + U * R[7];
+        const dz = E * R[2] + N * R[5] + U * R[8];
+        // Bildschirmdrehung ausgleichen
+        const rx = dx * cs + dy * sn;
+        const ry = -dx * sn + dy * cs;
+        dx = rx; dy = ry;
+
+        const depth = -dz; // vor der Kamera, wenn > 0
+        const below = bdy.alt < 0;
+        if (depth > 0.06) {
+          const x = W / 2 + focal * (dx / depth);
+          const y = H / 2 - focal * (dy / depth);
+          if (x > -60 && x < W + 60 && y > -60 && y < H + 60) {
+            drawMarker(x, y, bdy, below);
+            continue;
+          }
+        }
+        // außerhalb / hinter der Kamera -> Randpfeil in Richtung des Objekts
+        drawEdgeArrow(dx, dy, bdy, W, H);
+      }
+    }
+
+    function drawMarker(x: number, y: number, b: SkyBody, below: boolean) {
+      const col = COLORS[b.id] ?? '#8b97b5';
+      ctx.globalAlpha = below ? 0.4 : 1;
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Fadenkreuz
+      for (const [ex, ey] of [[-20, 0], [20, 0], [0, -20], [0, 20]] as const) {
+        ctx.beginPath();
+        ctx.moveTo(x + ex * 0.7, y + ey * 0.7);
+        ctx.lineTo(x + ex, y + ey);
+        ctx.stroke();
+      }
+      ctx.font = "600 15px 'Space Grotesk Variable', sans-serif";
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(b.name, x + 22, y - 6);
+      ctx.font = "11px 'JetBrains Mono Variable', monospace";
+      ctx.fillStyle = col;
+      ctx.fillText(below ? 'unter dem Horizont' : `${Math.round(b.alt)}° hoch`, x + 22, y + 10);
+      ctx.globalAlpha = 1;
+    }
+
+    function drawEdgeArrow(dx: number, dy: number, b: SkyBody, W: number, H: number) {
+      const col = COLORS[b.id] ?? '#8b97b5';
+      const cx = W / 2, cy = H / 2;
+      const ang = Math.atan2(-dy, dx); // Bildschirm: y nach unten
+      const rad = Math.min(W, H) * 0.42;
+      const x = cx + Math.cos(ang) * rad;
+      const y = cy + Math.sin(ang) * rad;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = col;
+      ctx.strokeStyle = col;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.moveTo(10, 0);
+      ctx.lineTo(-6, -6);
+      ctx.lineTo(-6, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.font = "600 12px 'Space Grotesk Variable', sans-serif";
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(b.name, x, y - 12);
+      ctx.globalAlpha = 1;
+    }
+
+    openBtn.addEventListener('click', () => void open());
+    scanner.querySelector('[data-scanner-close]')?.addEventListener('click', close);
+    scanner.querySelectorAll<HTMLElement>('[data-cal]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        azOffset += Number(btn.dataset.cal);
+      })
+    );
+    window.addEventListener('resize', () => !scanner.hidden && resize());
+    // Positionen halbminütlich auffrischen
+    setInterval(() => !scanner.hidden && recompute(), 30000);
+  }
+</script>

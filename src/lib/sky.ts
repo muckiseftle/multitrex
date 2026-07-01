@@ -211,3 +211,90 @@ export function planetVisibility(date: Date): PlanetVis[] {
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Horizontkoordinaten (Höhe/Azimut) — für den AR-Himmelsscanner      */
+/* ------------------------------------------------------------------ */
+
+const OBLIQUITY = 23.4393 * DEG; // Ekliptikschiefe
+
+/** Geozentrische Ekliptik-Breite des Mondes (Grad, Niedrigpräzision) */
+function moonLatitude(d: number): number {
+  const F = (93.272 + 13.22935 * d) * DEG;
+  return 5.128 * Math.sin(F);
+}
+
+/** Ekliptik (Länge/Breite) -> Äquator (Rektaszension/Deklination), Grad */
+function eclToEqu(lonDeg: number, latDeg: number): { ra: number; dec: number } {
+  const l = lonDeg * DEG;
+  const b = latDeg * DEG;
+  const sinDec = Math.sin(b) * Math.cos(OBLIQUITY) + Math.cos(b) * Math.sin(OBLIQUITY) * Math.sin(l);
+  const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+  const ra = Math.atan2(
+    Math.sin(l) * Math.cos(OBLIQUITY) - Math.tan(b) * Math.sin(OBLIQUITY),
+    Math.cos(l)
+  );
+  return { ra: norm360(ra / DEG), dec: dec / DEG };
+}
+
+/** Greenwich Mean Sidereal Time in Grad */
+function gmstDeg(date: Date): number {
+  const d = daysSinceJ2000(date);
+  return norm360(280.46061837 + 360.98564736629 * d);
+}
+
+/** Äquator -> Horizont (Höhe/Azimut). Azimut von Nord über Ost, Grad. */
+function equToHoriz(raDeg: number, decDeg: number, latDeg: number, lonDeg: number, date: Date) {
+  const lst = norm360(gmstDeg(date) + lonDeg); // Ostlänge positiv
+  const H = norm180(lst - raDeg) * DEG; // Stundenwinkel
+  const dec = decDeg * DEG;
+  const lat = latDeg * DEG;
+  const sinAlt = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H);
+  const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+  let az = Math.atan2(
+    Math.sin(H),
+    Math.cos(H) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat)
+  ); // von Süden
+  az = az + Math.PI; // -> von Norden über Ost
+  return { alt: alt / DEG, az: norm360(az / DEG) };
+}
+
+export type SkyBody = { id: string; name: string; alt: number; az: number };
+
+/** Höhe/Azimut von Sonne, Mond und den 5 hellen Planeten für Ort + Zeit */
+export function horizontalPositions(date: Date, latDeg: number, lonDeg: number): SkyBody[] {
+  const d = daysSinceJ2000(date);
+  const T = d / 36525;
+  const earth = PLANETS.find((p) => p.id === 'erde')!;
+  const [ex, ey, ez] = helioXYZ(earth, T);
+  const out: SkyBody[] = [];
+
+  // Sonne (geozentrisch = Gegenrichtung der Erde)
+  {
+    const lon = norm360(Math.atan2(-ey, -ex) / DEG);
+    const lat = Math.atan2(-ez, Math.hypot(ex, ey)) / DEG;
+    const { ra, dec } = eclToEqu(lon, lat);
+    const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
+    out.push({ id: 'sonne', name: 'Sonne', alt: h.alt, az: h.az });
+  }
+  // Mond
+  {
+    const { ra, dec } = eclToEqu(moonLongitude(d), moonLatitude(d));
+    const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
+    out.push({ id: 'mond', name: 'Mond', alt: h.alt, az: h.az });
+  }
+  // Planeten
+  for (const p of PLANETS) {
+    if (p.id === 'erde') continue;
+    const [x, y, z] = helioXYZ(p, T);
+    const gx = x - ex;
+    const gy = y - ey;
+    const gz = z - ez;
+    const lon = norm360(Math.atan2(gy, gx) / DEG);
+    const lat = Math.atan2(gz, Math.hypot(gx, gy)) / DEG;
+    const { ra, dec } = eclToEqu(lon, lat);
+    const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
+    out.push({ id: p.id, name: p.name, alt: h.alt, az: h.az });
+  }
+  return out;
+}
