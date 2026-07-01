@@ -593,7 +593,10 @@
     // --- Weiche Ausrichtung: Sensor-Jitter per Quaternion-Slerp dämpfen. ---
     // Ruhig beim Stillhalten, flüssig folgend beim Schwenken. Slerp meidet
     // zusätzlich Sprünge beim Nord-Übergang (360°/0°).
-    const SMOOTH_MIN = 0.09; // Grunddämpfung pro Frame (kleiner = ruhiger)
+    const FOLLOW = 0.16;   // Basis-Folgeanteil pro Frame bei normaler Bewegung
+    const MAX_SLEW = 0.07; // Obergrenze der Aenderung pro Frame (rad, ~4°):
+                           // deckelt Ausreisser & bistabiles Kippen; ein
+                           // 60°-Schwenk sitzt trotzdem in ~0,4 s.
     let smoothQ: number[] | null = null;
 
     function matToQuat(R: number[]): number[] {
@@ -633,10 +636,14 @@
       let dot = q[0] * smoothQ[0] + q[1] * smoothQ[1] + q[2] * smoothQ[2] + q[3] * smoothQ[3];
       if (dot < 0) { for (let i = 0; i < 4; i++) q[i] = -q[i]; dot = -dot; }
       dot = Math.min(1, Math.max(-1, dot));
-      // Winkel zwischen alter und neuer Ausrichtung → adaptiver Faktor:
-      // still = stark glätten, schnelle Bewegung = zügiger nachziehen.
+      // Slew-Rate-Begrenzung: normale Schwenks laufen mit FOLLOW-Anteil weich
+      // mit, aber die Bewegung pro Frame wird bei MAX_SLEW gedeckelt. Dadurch
+      // werden Sensor-Ausreisser und bistabiles Kippen ("mal da, mal da")
+      // automatisch herausgemittelt, statt ihnen hinterherzuspringen.
       const delta = 2 * Math.acos(Math.min(1, Math.abs(dot)));
-      const t = Math.min(0.6, SMOOTH_MIN + delta * 2.2);
+      let step = FOLLOW * delta;
+      if (step > MAX_SLEW) step = MAX_SLEW;
+      const t = delta > 1e-6 ? step / delta : 0;
       let a: number, b: number;
       if (dot > 0.9995) {
         a = 1 - t; b = t;
