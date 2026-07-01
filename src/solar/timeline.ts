@@ -48,45 +48,28 @@ export function buildTimeline(scene: SolarScene, journeyEl: HTMLElement) {
       Math.max(arrive + 1, sec.offsetTop + sec.offsetHeight - innerHeight * 0.45)
     );
 
-    // Mobile (Bottom-Sheet-Panels): Planet erscheint groß im oberen Drittel.
-    // Distanz aus dem HORIZONTALEN Sichtfeld berechnen — im Portrait-Viewport
-    // ist das der begrenzende Faktor, sonst wirken die Planeten winzig.
     const mobile = innerWidth < 700;
-    const aspect = innerWidth / innerHeight;
-    const halfTanH = Math.tan((25 * Math.PI) / 180) * aspect; // halber horizontaler FOV
-    // Saturn: Ring (2,35 × Radius) darf seitlich anschneiden — bewusst cinematisch
-    const effRadius = v.id === 'saturn' ? (v.scale * 2.35) / 2.2 : v.scale;
-    const mobileDist = Math.max(7.5, effRadius / (0.7 * halfTanH));
+    // Orbit-Pose (Höhe = viewDist) als Ziel des Anflugs — verbindet nahtlos
+    // mit dem folgenden Tiefflug (dessen s=0 dieselbe Pose ist).
+    const e0 = scene.flyCamLook(v.id, 0, mobile);
 
-    // Mobil rückt die Kamera seitlich fast bis zum Planeten (x=±7), sonst
-    // vergrößert die Schräg-Distanz den Abstand und der Planet schrumpft wieder
-    const camX = mobile ? v.x * 0.75 : v.x * 0.3;
-    const sideGap = mobile ? v.x * 0.25 : 0;
-    const camZ =
-      v.z +
-      (mobile
-        ? Math.sqrt(Math.max(mobileDist * mobileDist - sideGap * sideGap, 30))
-        : v.viewDist);
-    // Blick proportional unter den Planeten -> er sitzt auf jedem Gerät gleich hoch
-    const lookY = mobile ? -0.17 * mobileDist : 0;
+    // Anflug: aus der Ferne zur Orbit-Höhe über dem Planeten
+    tl.to(cam, { x: e0.cam.x, y: e0.cam.y, z: e0.cam.z, duration: arrive - prevDepart }, prevDepart);
+    tl.to(look, { x: e0.look.x, y: e0.look.y, z: e0.look.z, duration: arrive - prevDepart }, prevDepart);
 
-    // Anflug — Kamera startet leicht oberhalb und sinkt auf Planetenhöhe:
-    // wirkt wie ein Heranschweben aus dem Orbit
-    const approachY = mobile ? 0 : v.scale * 0.5;
-    tl.to(cam, { x: camX, y: approachY, z: camZ, duration: arrive - prevDepart }, prevDepart);
-    tl.to(look, { x: mobile ? v.x * 0.9 : v.x, y: lookY, z: v.z, duration: arrive - prevDepart }, prevDepart);
-
-    // Verweilen: echter Vorbeiflug — Kamera gleitet seitlich UND über den
-    // Planeten hinweg, kommt dabei näher heran (Krater am Terminator).
-    const drift = mobile ? 1.2 : v.scale * 0.9 + 1.6;
-    const closer = mobile ? 1 : v.viewDist * 0.16; // spürbar näher rankommen
+    // Tiefflug: hinab zur Oberfläche, dicht darüber hinweg, wieder heraus.
+    // Ein Proxy scrubbt s=0..1; die Pose kommt aus scene.flyCamLook().
+    const fly = { s: 0 };
     tl.to(
-      cam,
+      fly,
       {
-        x: camX + (v.x > 0 ? -drift : drift),
-        y: mobile ? 0 : -v.scale * 0.35,
-        z: camZ - closer,
+        s: 1,
         duration: depart - arrive,
+        onUpdate: () => {
+          const r = scene.flyCamLook(v.id, fly.s, mobile);
+          cam.copy(r.cam);
+          look.copy(r.look);
+        },
       },
       arrive
     );

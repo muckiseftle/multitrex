@@ -149,16 +149,21 @@ async function init3D(journey: HTMLElement) {
   /* Render-Loop über den GSAP-Ticker (pausiert automatisch bei verstecktem Tab) */
   gsap.ticker.add(() => scene.update());
 
-  /* Dev-Verifikation: /sonnensystem/?pose=mars stellt die Kamera fest ein */
+  /* Dev-Verifikation: ?pose=mars (Disc) oder ?fly=mars&s=0.5 (Tiefflug) */
   if (import.meta.env.DEV) {
-    const pose = new URLSearchParams(location.search).get('pose');
-    if (pose) {
+    const params = new URLSearchParams(location.search);
+    const pose = params.get('pose');
+    const fly = params.get('fly');
+    const which = pose || fly;
+    if (which) {
       timeline.scrollTrigger?.disable();
       timeline.pause();
       stage.setAttribute('data-3d-ready', '');
-      void scene.queue.load(pose === 'mond' ? 'mond' : pose);
+      void scene.queue.load(which);
+      const sVal = parseFloat(params.get('s') ?? '0.5');
       const paint = () => {
-        scene.debugPose(pose);
+        if (fly) scene.flyPose(fly, sVal);
+        else scene.debugPose(pose!);
         requestAnimationFrame(paint);
       };
       requestAnimationFrame(paint);

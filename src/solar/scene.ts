@@ -499,6 +499,63 @@ export class SolarScene {
     this.update(); // zweiter Pass: Monde-Sichtbarkeit folgt planet.visible
   }
 
+  /**
+   * Kamera + Blickziel für den Tiefflug. s ∈ [0,1]:
+   *  - s≈0/1: hoch über dem Planeten (rahmt die Scheibe, verbindet nahtlos mit An-/Abflug)
+   *  - s≈0.5: knapp über der Oberfläche, streifender Blick zum gekrümmten Horizont
+   * Reine Berechnung ohne Seiteneffekte — die Timeline scrubt darüber.
+   */
+  flyCamLook(id: string, s: number, mobile = false): { cam: THREE.Vector3; look: THREE.Vector3 } {
+    const v = PLANET_VISUALS.find((p) => p.id === id)!;
+    const R = v.scale;
+    const P = new THREE.Vector3(v.x, 0, v.z);
+    const sun = new THREE.Vector3(SUN_POS.x, SUN_POS.y, SUN_POS.z).sub(P).normalize();
+    const toView = new THREE.Vector3(0, 0, 1);
+
+    const n0 = sun.clone().multiplyScalar(0.5).add(toView.clone().multiplyScalar(0.9)).normalize();
+    let sweepT = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), n0);
+    if (sweepT.lengthSq() < 1e-4) sweepT.set(1, 0, 0);
+    sweepT.normalize();
+
+    // Ankerpunkt wandert seitlich über die Oberfläche (Gefühl von Reise)
+    const a = THREE.MathUtils.lerp(-0.55, 0.55, s);
+    const n = n0.clone().multiplyScalar(Math.cos(a)).add(sweepT.clone().multiplyScalar(Math.sin(a))).normalize();
+
+    // Höhenprofil: an den Enden Orbit-Höhe (= viewDist), in der Mitte Tiefflug.
+    // sin(pi·s) ist 0 an den Enden, 1 in der Mitte -> weicher Sink-/Steigflug.
+    const highH = v.viewDist / R - 1;
+    const lowH = mobile ? 0.6 : 0.17;
+    const dip = Math.sin(Math.PI * Math.min(Math.max(s, 0), 1));
+    const h = highH + (lowH - highH) * dip;
+    const cam = P.clone().add(n.clone().multiplyScalar(R * (1 + h)));
+
+    // Blick: hoch -> Planetenzentrum (Scheibe), tief -> Oberflächenpunkt an der
+    // besonnten Kante (Horizont). fwdSun zeigt tangential zur Sonne.
+    let fwdSun = sun.clone().sub(n.clone().multiplyScalar(sun.dot(n)));
+    if (fwdSun.lengthSq() < 1e-4) fwdSun.copy(sweepT);
+    fwdSun.normalize();
+    const DA = 0.46;
+    const nAhead = n.clone().multiplyScalar(Math.cos(DA)).add(fwdSun.clone().multiplyScalar(Math.sin(DA))).normalize();
+    const surfaceLook = P.clone().add(nAhead.multiplyScalar(R));
+    const look = P.clone().lerp(surfaceLook, 0.3 + 0.7 * dip);
+
+    return { cam, look };
+  }
+
+  /** Nur Dev/Verifikation: Tiefflug-Pose fest setzen. */
+  flyPose(id: string, s: number) {
+    const v = PLANET_VISUALS.find((p) => p.id === id);
+    if (!v) return;
+    const mesh = this.planets.get(id);
+    if (mesh) mesh.visible = true;
+    const { cam, look } = this.flyCamLook(id, s);
+    this.camera.position.copy(cam);
+    this.lookTarget.copy(look);
+    this.setLightFalloff(v.index / 8);
+    this.update();
+    this.update();
+  }
+
   dispose() {
     this.renderer.dispose();
   }
