@@ -444,8 +444,20 @@
     let azOffset = 0;
     let loc = { ...ALLGAEU };
     let toastTimer = 0;
+    let usingAbsolute = false;
 
-    const onOrient = (e: DeviceOrientationEvent) => (orient = e);
+    // Nur EINE Sensorquelle verwenden. deviceorientation (relativ) und
+    // deviceorientationabsolute (magnetisch, echtes Nord) haben auf Android
+    // unterschiedliche Nordreferenzen — beide gleichzeitig zu lesen liess die
+    // Marker Frame fuer Frame zwischen zwei Positionen springen. Sobald eine
+    // absolute Quelle liefert, gewinnt sie; die relative wird dann ignoriert.
+    const onAbs = (e: DeviceOrientationEvent) => {
+      usingAbsolute = true;
+      orient = e;
+    };
+    const onRel = (e: DeviceOrientationEvent) => {
+      if (!usingAbsolute) orient = e;
+    };
     const status = (t: string) => (statusEl.textContent = t);
     const hasSensors = typeof DeviceOrientationEvent !== 'undefined';
 
@@ -481,10 +493,11 @@
       } catch {
         /* ignorieren */
       }
+      usingAbsolute = false;
       if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', onOrient as EventListener);
+        window.addEventListener('deviceorientationabsolute', onAbs as EventListener);
       }
-      window.addEventListener('deviceorientation', onOrient);
+      window.addEventListener('deviceorientation', onRel);
 
       // Kamera
       try {
@@ -526,8 +539,8 @@
     function close() {
       cancelAnimationFrame(raf);
       clearTimeout(toastTimer);
-      window.removeEventListener('deviceorientation', onOrient);
-      window.removeEventListener('deviceorientationabsolute', onOrient as EventListener);
+      window.removeEventListener('deviceorientation', onRel);
+      window.removeEventListener('deviceorientationabsolute', onAbs as EventListener);
       stream?.getTracks().forEach((t) => t.stop());
       stream = null;
       smoothQ = null;
