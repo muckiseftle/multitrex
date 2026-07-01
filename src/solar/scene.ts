@@ -472,24 +472,34 @@ export class SolarScene {
     const neptunZ = PLANET_VISUALS.find((p) => p.id === 'neptun')!.z;
     const beltZ = (marsZ + jupZ) / 2;
 
-    const count = tier === 'high' ? 2600 : 1100;
+    const count = tier === 'high' ? 3000 : 1300;
     const positions = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
     const colors = new Float32Array(count * 3);
     const alphas = new Float32Array(count);
+    // Ringförmige Wolke um die Flugachse (x=y=0): Rayleigh-Radius -> dichte
+    // Mitte, weich ausfranzende Ränder; Gauß-Band in z. Keine harten Kanten.
+    const RADIUS_SIGMA = 17; // Radius mit höchster Dichte
+    const Z_SIGMA = 15;
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 80;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 44;
-      positions[i * 3 + 2] = beltZ + (Math.random() - 0.5) * 52;
+      const r = RADIUS_SIGMA * Math.sqrt(-2 * Math.log(1 - Math.random()));
+      const th = Math.random() * Math.PI * 2;
+      // Gauß-Streuung in z (Box-Muller)
+      const zg = Z_SIGMA * Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(Math.random() * Math.PI * 2);
+      positions[i * 3] = Math.cos(th) * r;
+      positions[i * 3 + 1] = Math.sin(th) * r * 0.62; // leicht abgeflacht -> Scheibe/Band
+      positions[i * 3 + 2] = beltZ + zg;
       // meist kleine Brocken, wenige größere Felsen
-      const r = Math.random();
-      sizes[i] = r < 0.9 ? 0.07 + Math.random() * 0.16 : 0.28 + Math.random() * 0.55;
+      const rr = Math.random();
+      sizes[i] = rr < 0.9 ? 0.07 + Math.random() * 0.16 : 0.28 + Math.random() * 0.55;
       // Gesteinsfarben (grau-braun, leicht variiert)
       const base = 0.4 + Math.random() * 0.3;
       colors[i * 3] = base * (0.82 + Math.random() * 0.25);
       colors[i * 3 + 1] = base * (0.72 + Math.random() * 0.18);
       colors[i * 3 + 2] = base * (0.58 + Math.random() * 0.16);
-      alphas[i] = 0.55 + Math.random() * 0.45;
+      // Außen weicher ausblenden -> Ränder lösen sich in den Raum auf
+      const fade = Math.exp(-(r * r) / (2 * 26 * 26));
+      alphas[i] = (0.5 + Math.random() * 0.5) * (0.35 + 0.65 * fade);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -756,7 +766,7 @@ export class SolarScene {
       const marsZ = PLANET_VISUALS.find((p) => p.id === 'mars')!.z;
       const jupZ = PLANET_VISUALS.find((p) => p.id === 'jupiter')!.z;
       const z = (marsZ + jupZ) / 2;
-      this.camera.position.set(2, 6, z + 36);
+      this.camera.position.set(0, 4, z + 62); // aus der Ferne, frontal (dort war das „Quadrat")
       this.lookTarget.set(0, 0, z);
     } else if (name === 'comet' && this.comet) {
       const c = this.comet.position;
