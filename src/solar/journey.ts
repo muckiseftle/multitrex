@@ -38,11 +38,14 @@ function hideLoader() {
 }
 
 function setLoaderProgress(p: number) {
-  const pct = Math.round(Math.min(1, Math.max(0, p)) * 100);
+  const clamped = Math.min(1, Math.max(0, p));
+  const pct = Math.round(clamped * 100);
   const fill = document.querySelector<HTMLElement>('[data-loader-fill]');
+  const comet = document.querySelector<HTMLElement>('[data-loader-comet]');
   const label = document.querySelector<HTMLElement>('[data-loader-pct]');
   const bar = document.querySelector<HTMLElement>('.loader__bar');
-  if (fill) fill.style.width = `${pct}%`;
+  if (fill) fill.style.width = `${clamped * 100}%`;
+  if (comet) comet.style.left = `${clamped * 100}%`; // Komet reitet auf der Spitze
   if (label) label.textContent = String(pct);
   bar?.setAttribute('aria-valuenow', String(pct));
 }
@@ -298,23 +301,47 @@ async function init3D(journey: HTMLElement) {
     'mond', 'saturn-ring', 'erde-wolken', 'erde-nacht',
   ];
   let loaded = 0;
+  let assetsDone = false;
   setLoaderProgress(0);
-  const loads = assets.map((id) =>
-    scene.queue
-      .load(id)
-      .catch(() => {})
-      .finally(() => {
-        loaded += 1;
-        setLoaderProgress(loaded / assets.length);
-      })
+  const settled = Promise.allSettled(
+    assets.map((id) =>
+      scene.queue
+        .load(id)
+        .catch(() => {})
+        .finally(() => {
+          loaded += 1;
+        })
+    )
   );
-  // Sicherheitsnetz: nach spätestens 9 s trotzdem starten (langsames Netz)
-  await Promise.race([
-    Promise.allSettled(loads),
-    new Promise((r) => setTimeout(r, 9000)),
-  ]);
+  settled.then(() => (assetsDone = true));
 
-  scene.warmup(); // Shader kompilieren + Texturen hochladen
+  // Der Komet fliegt in mind. ~3 s über den Balken (auch wenn schnell geladen).
+  // Sicherheitsnetz: nach 10 s trotzdem starten. GPU dabei aufgewärmt.
+  const MIN_MS = 3000;
+  const MAX_MS = 10000;
+  const t0 = performance.now();
+  let warmed = false;
+  await new Promise<void>((resolve) => {
+    const tick = () => {
+      const elapsed = performance.now() - t0;
+      const real = loaded / assets.length;
+      // sichtbarer Fortschritt: durch Ladezustand UND Mindestzeit begrenzt
+      setLoaderProgress(Math.min(real, elapsed / MIN_MS));
+      // GPU aufwärmen, sobald die Texturen da sind (einmalig, während Loader läuft)
+      if (assetsDone && !warmed) {
+        warmed = true;
+        scene.warmup();
+      }
+      if ((assetsDone && elapsed >= MIN_MS) || elapsed >= MAX_MS) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+
+  if (!warmed) scene.warmup();
   setLoaderProgress(1);
 
   // zwei Frames rendern, dann sanft überblenden

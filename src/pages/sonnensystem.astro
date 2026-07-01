@@ -25,16 +25,13 @@ const fmt = new Intl.NumberFormat('de-DE');
     <!-- Ladeanimation: fliegender Komet + echter Fortschritt. Solange wird die
          Szene vorgeladen und die GPU aufgewärmt -> danach keine Ruckler. -->
     <div class="loader" id="solar-loader">
-      <div class="loader__sky" aria-hidden="true">
-        <div class="loader__comet">
-          <span class="loader__tail"></span>
-          <span class="loader__head"></span>
-        </div>
-      </div>
       <div class="loader__info">
         <p class="label label--accent">Unser Sonnensystem</p>
         <div class="loader__bar" role="progressbar" aria-label="Ladefortschritt" aria-valuemin="0" aria-valuemax="100">
           <span class="loader__fill" data-loader-fill></span>
+          <span class="loader__comet" data-loader-comet aria-hidden="true">
+            <span class="loader__head"></span>
+          </span>
         </div>
         <p class="loader__status label"><span data-loader-pct>0</span> % · wird gerendert</p>
       </div>
@@ -215,100 +212,86 @@ const fmt = new Intl.NumberFormat('de-DE');
     pointer-events: none;
   }
 
-  .loader__sky {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-
-  /* Komet fliegt diagonal durchs Bild, Schweif zieht nach */
-  .loader__comet {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    animation: comet-fly 2.6s var(--ease-out) infinite;
-  }
-  .loader__head {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #ffffff 0%, var(--color-accent) 55%, transparent 72%);
-    box-shadow:
-      0 0 14px 3px rgb(111 227 255 / 0.7),
-      0 0 34px 10px rgb(111 227 255 / 0.28);
-    transform: translate(-50%, -50%);
-  }
-  .loader__tail {
-    position: absolute;
-    right: 6px;
-    top: -1.5px;
-    width: 170px;
-    height: 3px;
-    transform-origin: right center;
-    transform: translateX(0);
-    border-radius: 3px;
-    background: linear-gradient(
-      to left,
-      rgb(111 227 255 / 0.85),
-      rgb(111 227 255 / 0.35) 35%,
-      rgb(111 227 255 / 0) 100%
-    );
-    filter: blur(0.4px);
-  }
-
-  @keyframes comet-fly {
-    0% {
-      transform: translate(-16vw, 74vh) rotate(-22deg);
-      opacity: 0;
-    }
-    12% {
-      opacity: 1;
-    }
-    88% {
-      opacity: 1;
-    }
-    100% {
-      transform: translate(116vw, 20vh) rotate(-22deg);
-      opacity: 0;
-    }
-  }
-
   .loader__info {
     position: relative;
     z-index: 1;
     display: grid;
     justify-items: center;
-    gap: var(--space-3);
+    gap: var(--space-4);
     text-align: center;
   }
+
+  /* Der Komet fliegt AUF dem Ladebalken: Kopf an der Spitze, glühender
+     Schweif = der zurückgelegte (gefüllte) Teil. */
   .loader__bar {
-    width: min(62vw, 320px);
-    height: 2px;
+    position: relative;
+    width: min(72vw, 420px);
+    height: 3px;
     background: var(--color-space-700);
-    border-radius: 2px;
-    overflow: hidden;
+    border-radius: 3px;
   }
   .loader__fill {
-    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--color-accent-warm), var(--color-accent));
+    border-radius: 3px;
+    background: linear-gradient(
+      90deg,
+      rgb(255 180 92 / 0) 0%,
+      var(--color-accent-warm) 45%,
+      var(--color-accent) 100%
+    );
     box-shadow: 0 0 12px rgb(111 227 255 / 0.5);
-    transition: width 0.25s var(--ease-out);
+    transition: width 0.12s linear;
   }
+  .loader__comet {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 0;
+    transition: left 0.12s linear;
+  }
+  .loader__head {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, #ffffff 0%, var(--color-accent) 52%, transparent 72%);
+    box-shadow:
+      0 0 16px 3px rgb(111 227 255 / 0.8),
+      0 0 40px 12px rgb(111 227 255 / 0.3);
+  }
+  /* kleine Funken-Aura am Kopf */
+  .loader__head::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid rgb(111 227 255 / 0.35);
+    animation: comet-pulse 1.4s var(--ease-out) infinite;
+  }
+  @keyframes comet-pulse {
+    0% { transform: scale(0.7); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
   .loader__status {
     font-variant-numeric: tabular-nums;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .loader__comet {
+    .loader__head::after {
       animation: none;
     }
-    .loader {
+    .loader,
+    .loader__fill,
+    .loader__comet {
       transition: none;
     }
   }
