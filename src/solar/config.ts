@@ -47,6 +47,11 @@ export const PLANET_VISUALS: PlanetVisual[] = JOURNEY_ORDER.map((id, i) => {
   const data = planetsJson.find((p) => p.id === id);
   if (!data) throw new Error(`planets.json: ${id} fehlt`);
   const scale = visualScale(data.radiusEarths);
+  // Distanz proportional zur Planetengröße -> jeder Planet füllt konstant
+  // ~gleich viel Bild. Kleine Gesteinsplaneten kommen so nah genug heran,
+  // dass Krater-Relief am Terminator sichtbar wird.
+  const K = id === 'saturn' ? 5.4 : 4.4; // Saturn: extra Abstand für den Ring
+  const viewDist = Math.max(5.5, scale * K);
   return {
     id,
     tint: data.tint,
@@ -54,8 +59,7 @@ export const PLANET_VISUALS: PlanetVisual[] = JOURNEY_ORDER.map((id, i) => {
     x: (i % 2 === 0 ? 1 : -1) * SIDE_OFFSET,
     z: -(i + 1) * STATION_GAP,
     index: i,
-    // Gasriesen brauchen Abstand (Saturn extra wegen Ring)
-    viewDist: VIEW_DISTANCE + Math.max(0, scale - 1.8) * (id === 'saturn' ? 3.4 : 2.4),
+    viewDist,
   };
 });
 

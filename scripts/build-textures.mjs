@@ -25,6 +25,8 @@ const MAP = {
   'saturn-ring': ['saturn_ring_alpha.png'],
   uranus: ['uranus.jpg'],
   neptun: ['neptune.jpg'],
+  // Erdmond — dient zugleich als Bump-Quelle (Krater-Relief)
+  mond: ['8k_moon.jpg', '2k_moon.jpg'],
 };
 
 const SIZES = [

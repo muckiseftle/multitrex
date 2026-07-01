@@ -70,13 +70,26 @@ export function buildTimeline(scene: SolarScene, journeyEl: HTMLElement) {
     // Blick proportional unter den Planeten -> er sitzt auf jedem Gerät gleich hoch
     const lookY = mobile ? -0.17 * mobileDist : 0;
 
-    // Anflug
-    tl.to(cam, { x: camX, y: 0, z: camZ, duration: arrive - prevDepart }, prevDepart);
+    // Anflug — Kamera startet leicht oberhalb und sinkt auf Planetenhöhe:
+    // wirkt wie ein Heranschweben aus dem Orbit
+    const approachY = mobile ? 0 : v.scale * 0.5;
+    tl.to(cam, { x: camX, y: approachY, z: camZ, duration: arrive - prevDepart }, prevDepart);
     tl.to(look, { x: mobile ? v.x * 0.9 : v.x, y: lookY, z: v.z, duration: arrive - prevDepart }, prevDepart);
 
-    // Verweilen: leichter Orbit-Schwenk für Parallaxe (mobil dezenter, Kamera ist näher)
-    const drift = mobile ? 1.1 : 2.4;
-    tl.to(cam, { x: camX + (v.x > 0 ? -drift : drift), z: camZ - (mobile ? 1 : 2), duration: depart - arrive }, arrive);
+    // Verweilen: echter Vorbeiflug — Kamera gleitet seitlich UND über den
+    // Planeten hinweg, kommt dabei näher heran (Krater am Terminator).
+    const drift = mobile ? 1.2 : v.scale * 0.9 + 1.6;
+    const closer = mobile ? 1 : v.viewDist * 0.16; // spürbar näher rankommen
+    tl.to(
+      cam,
+      {
+        x: camX + (v.x > 0 ? -drift : drift),
+        y: mobile ? 0 : -v.scale * 0.35,
+        z: camZ - closer,
+        duration: depart - arrive,
+      },
+      arrive
+    );
 
     prevDepart = depart;
   }

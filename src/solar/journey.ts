@@ -138,7 +138,7 @@ async function init3D(journey: HTMLElement) {
   gsap.ticker.lagSmoothing(0);
 
   const scene = new SolarScene(canvas, tier);
-  buildTimeline(scene, journey);
+  const timeline = buildTimeline(scene, journey);
 
   if (import.meta.env.DEV) {
     (window as unknown as Record<string, unknown>).__solar = scene;
@@ -149,6 +149,23 @@ async function init3D(journey: HTMLElement) {
   /* Render-Loop über den GSAP-Ticker (pausiert automatisch bei verstecktem Tab) */
   gsap.ticker.add(() => scene.update());
 
+  /* Dev-Verifikation: /sonnensystem/?pose=mars stellt die Kamera fest ein */
+  if (import.meta.env.DEV) {
+    const pose = new URLSearchParams(location.search).get('pose');
+    if (pose) {
+      timeline.scrollTrigger?.disable();
+      timeline.pause();
+      stage.setAttribute('data-3d-ready', '');
+      void scene.queue.load(pose === 'mond' ? 'mond' : pose);
+      const paint = () => {
+        scene.debugPose(pose);
+        requestAnimationFrame(paint);
+      };
+      requestAnimationFrame(paint);
+      return;
+    }
+  }
+
   /* Canvas erst überblenden, wenn die erste Planeten-Textur da ist —
      bis dahin trägt das CSS-Sonnenglühen. „Nichts von Ladezeiten merken." */
   try {
@@ -157,4 +174,17 @@ async function init3D(journey: HTMLElement) {
     /* Textur fehlgeschlagen? Tint-Farben reichen auch. */
   }
   requestAnimationFrame(() => stage.setAttribute('data-3d-ready', ''));
+
+  /* Deep-Link: /sonnensystem/#saturn öffnet direkt beim Planeten.
+     Erst nach dem Reveal, damit die Sektions-Offsets final vermessen sind. */
+  const hashId = location.hash.slice(1);
+  const target = hashId ? document.getElementById(hashId) : null;
+  if (target) {
+    requestAnimationFrame(() =>
+      lenis.scrollTo(target, {
+        offset: target.offsetHeight / 2 - innerHeight / 2,
+        immediate: true,
+      })
+    );
+  }
 }

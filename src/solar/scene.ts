@@ -6,7 +6,12 @@ import {
   pickTextureSet,
   type DeviceTier,
 } from './config';
+import { MOON_DEFS, MOON_MIN_RADIUS, parentScale } from './moons';
 import { TextureQueue } from './loader';
+
+/** Gesteinskörper bekommen Bump-Relief aus ihrer Albedo-Textur (Krater) */
+const BUMPY = new Set(['merkur', 'mars']);
+const BUMP_SCALE: Record<string, number> = { merkur: 1.5, mars: 1.0, mond: 2.2 };
 
 /* ------------------------------------------------------------------ */
 /* Sonnen-Shader: FBM-Granulation + Fresnel-Rim — kein Postprocessing  */
@@ -149,6 +154,16 @@ export class SolarScene {
   private clock = new THREE.Clock();
   private tier: DeviceTier;
 
+  /** Umlauf-Pivots je Mond (für Animation + Sichtbarkeit) */
+  private moonOrbits: {
+    pivot: THREE.Object3D;
+    mesh: THREE.Mesh;
+    parent: string;
+    speed: number;
+    spin: number;
+    phase: number;
+  }[] = [];
+
   constructor(canvas: HTMLCanvasElement, tier: DeviceTier) {
     this.tier = tier;
 
@@ -156,6 +171,8 @@ export class SolarScene {
       canvas,
       antialias: true, // MSAA ist auf modernen GPUs günstig — Kanten immer glatt
       powerPreference: 'high-performance',
+      // nur im Dev: erlaubt Frame-Auslesen (toDataURL) für die Verifikation
+      preserveDrawingBuffer: import.meta.env.DEV,
     });
     this.renderer.setClearColor(0x05070f, 1);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, tier === 'high' ? 2 : 1.75));
@@ -173,6 +190,7 @@ export class SolarScene {
     this.sunMaterial = this.buildSun();
     this.buildStars();
     this.queue = this.buildPlanets(tier);
+    this.buildMoons(tier);
   }
 
   /* ---------------- Aufbau ---------------- */
@@ -358,11 +376,75 @@ export class SolarScene {
 
   private applyTexture(id: string, tex: THREE.Texture) {
     const mesh = this.planets.get(id);
-    if (!mesh) return; // Ring/Wolken werden separat verdrahtet
+    if (!mesh) return; // Ring/Wolken/Monde werden separat verdrahtet
     const mat = mesh.material as THREE.MeshStandardMaterial;
     mat.map = tex;
     mat.color.set(0xffffff);
+    // Gesteinsplaneten: Albedo als Bump -> Krater fangen am Terminator Licht
+    if (BUMPY.has(id)) {
+      mat.bumpMap = tex;
+      mat.bumpScale = BUMP_SCALE[id] ?? 1;
+    }
     mat.needsUpdate = true;
+  }
+
+  /** Monde: umlaufende Trabanten je Planet (Sichtbarkeit folgt dem Planeten) */
+  private buildMoons(tier: DeviceTier) {
+    const seg = tier === 'high' ? 48 : 24;
+    const geo = new THREE.SphereGeometry(1, seg, seg / 2);
+
+    for (const def of MOON_DEFS) {
+      const planet = this.planets.get(def.parent);
+      if (!planet) continue;
+      const pScale = parentScale(def.parent);
+      const radius = Math.max(MOON_MIN_RADIUS, def.radiusFrac * pScale);
+      const orbitDist = def.orbit * pScale;
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(def.tint),
+        roughness: 0.92,
+        metalness: 0,
+        dithering: true,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.scale.setScalar(radius);
+      mesh.position.set(orbitDist, 0, 0);
+      mesh.rotation.z = THREE.MathUtils.degToRad(8);
+
+      // Pivot am Planetenzentrum, um die Neigungsachse gekippt
+      const pivot = new THREE.Object3D();
+      pivot.position.copy(planet.position);
+      pivot.rotation.x = THREE.MathUtils.degToRad(def.incl);
+      pivot.rotation.y = def.phase * Math.PI * 2;
+      pivot.visible = false;
+      pivot.add(mesh);
+      this.scene.add(pivot);
+
+      this.moonOrbits.push({
+        pivot,
+        mesh,
+        parent: def.parent,
+        speed: def.speed,
+        spin: 0.25 + Math.abs(def.speed) * 0.1,
+        phase: def.phase * Math.PI * 2,
+      });
+
+      // nur der Erdmond hat eine echte Textur (+ Krater-Bump).
+      // Verzögert laden, damit die 2 MB nicht mit dem ersten Bildaufbau
+      // konkurrieren — bis dahin trägt die Tint-Farbe (Mond ist erst Stop 3).
+      if (def.texture) {
+        const tex = def.texture;
+        setTimeout(() => {
+          void this.queue.load(tex).then((t) => {
+            mat.map = t;
+            mat.color.set(0xffffff);
+            mat.bumpMap = t;
+            mat.bumpScale = BUMP_SCALE[tex] ?? 1.5;
+            mat.needsUpdate = true;
+          });
+        }, 1200);
+      }
+    }
   }
 
   /* ---------------- Laufzeit ---------------- */
@@ -385,6 +467,15 @@ export class SolarScene {
       this.clouds.rotation.y = t * 0.02; // Wolken driften relativ zur Erde
     }
 
+    // Monde umkreisen ihren Planeten (nur wenn dieser sichtbar ist)
+    for (const o of this.moonOrbits) {
+      const vis = this.planets.get(o.parent)?.visible ?? false;
+      o.pivot.visible = vis;
+      if (!vis) continue;
+      o.pivot.rotation.y = o.phase + t * o.speed * 0.28;
+      o.mesh.rotation.y = t * o.spin;
+    }
+
     this.camera.lookAt(this.lookTarget);
     this.renderer.render(this.scene, this.camera);
   }
@@ -393,6 +484,19 @@ export class SolarScene {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
+  }
+
+  /** Nur Dev/Verifikation: Kamera direkt in die Vorbeiflug-Pose eines Planeten. */
+  debugPose(id: string) {
+    const v = PLANET_VISUALS.find((p) => p.id === id);
+    if (!v) return;
+    const mesh = this.planets.get(id);
+    if (mesh) mesh.visible = true; // Cull-Ticker ist bei verstecktem Tab throttled
+    this.camera.position.set(v.x * 0.3 + (v.x > 0 ? -2 : 2), -v.scale * 0.35, v.z + v.viewDist * 0.82);
+    this.lookTarget.set(v.x, 0, v.z);
+    this.setLightFalloff(v.index / 8);
+    this.update();
+    this.update(); // zweiter Pass: Monde-Sichtbarkeit folgt planet.visible
   }
 
   dispose() {
