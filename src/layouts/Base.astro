@@ -7,6 +7,7 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Starfield from '../components/Starfield.astro';
+import { siteConfig } from '../site.config';
 
 interface Props {
   title: string;
@@ -90,6 +91,17 @@ const structuredData = {
     <!-- Strukturierte Daten (Schema.org) — hilft Google, die Inhalte und die
          Marke „Astrofotografie im Allgäu" als Entität zu verstehen -->
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline />
+
+    <!-- Cloudflare Web Analytics (cookielos) — lädt nur, wenn ein Token in
+         src/site.config.ts hinterlegt ist; sonst passiert nichts -->
+    {siteConfig.cloudflareAnalyticsToken && (
+      <script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={`{"token": "${siteConfig.cloudflareAnalyticsToken}"}`}
+        is:inline
+      />
+    )}
   </head>
   <body>
     {!noStarfield && <Starfield />}

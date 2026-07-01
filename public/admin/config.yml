@@ -1,0 +1,54 @@
+# Konfiguration der Redaktionsoberfläche (Sveltia CMS).
+# Legt fest, was per Klick bearbeitet werden kann. Änderungen werden als
+# Commit in dieses Repo geschrieben -> der Deploy-Workflow baut die Seite neu.
+
+backend:
+  name: github
+  repo: muckiseftle/multitrex
+  branch: main
+  # Anmeldung: einmalig einen Sveltia-Auth-Server (kostenloser Cloudflare
+  # Worker) einrichten und dessen Adresse hier eintragen. Anleitung:
+  # docs/admin-baukasten.md
+  # base_url: https://DEIN-AUTH-WORKER.workers.dev
+
+# Standard-Ablage für hochgeladene Bilder (wird pro Sammlung überschrieben)
+media_folder: src/assets/photos
+public_folder: /src/assets/photos
+
+# Deutschsprachige Oberfläche
+locale: de
+
+collections:
+  - name: portfolio
+    label: Astrofotos
+    label_singular: Astrofoto
+    description: Deine Aufnahmen — hier neue Bilder hinzufügen oder bestehende ändern.
+    folder: src/content/portfolio
+    create: true
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    summary: '{{title}}'
+    # Bilder relativ zur .md-Datei speichern -> passt zu Astros Content Collections
+    media_folder: '../../assets/photos'
+    public_folder: '../../assets/photos'
+    fields:
+      - { name: title, label: Titel, widget: string }
+      - { name: subtitle, label: Untertitel, widget: string, required: false }
+      - { name: image, label: Bild, widget: image }
+      - name: category
+        label: Kategorie
+        widget: select
+        options: ['Galaxien', 'Nebel', 'Mond & Planeten', 'Sterne', 'Sonstiges']
+        default: Sonstiges
+      - { name: order, label: 'Reihenfolge (kleine Zahl = weiter vorne)', widget: number, default: 99, value_type: int }
+      - { name: featured, label: 'Auf der Startseite zeigen', widget: boolean, default: false }
+      - { name: object, label: 'Objekt (z. B. M 42)', widget: string, required: false }
+      - { name: objectType, label: 'Typ (z. B. Emissionsnebel)', widget: string, required: false }
+      - { name: constellation, label: Sternbild, widget: string, required: false }
+      - { name: distance, label: Entfernung, widget: string, required: false }
+      - { name: captureDate, label: Aufnahmedatum, widget: string, required: false }
+      - { name: integration, label: 'Gesamtbelichtung (z. B. 4 h 20 min)', widget: string, required: false }
+      - { name: frames, label: 'Einzelbilder (z. B. 260 × 60 s)', widget: string, required: false }
+      - { name: gear, label: 'Setup / Equipment', widget: string, required: false }
+      - { name: body, label: Beschreibung, widget: markdown }
