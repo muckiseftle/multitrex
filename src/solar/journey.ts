@@ -125,24 +125,56 @@ function setupHoverCallout(
   const typeEl = callout?.querySelector<HTMLElement>('[data-callout-type]');
   if (!callout || !nameEl || !typeEl) return;
 
-  // Touch-Geräte haben kein echtes Hover -> Feature nur für Maus/Stift
-  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  const fineHover = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   let px = 0;
   let py = 0;
   let needPick = false;
 
+  // ---- Maus/Stift: Hover ----
+  if (fineHover) {
+    addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType === 'touch') return;
+        px = e.clientX;
+        py = e.clientY;
+        needPick = true;
+      },
+      { passive: true }
+    );
+    addEventListener('pointerleave', () => scene.clearHover());
+  }
+
+  // ---- Touch: Antippen zeigt den Namen (blendet nach einigen Sekunden aus) ----
+  let downX = 0;
+  let downY = 0;
+  let downT = 0;
+  let hideTimer: ReturnType<typeof setTimeout> | undefined;
   addEventListener(
-    'pointermove',
+    'pointerdown',
     (e) => {
-      if (e.pointerType === 'touch') return;
-      px = e.clientX;
-      py = e.clientY;
-      needPick = true;
+      if (e.pointerType !== 'touch') return;
+      downX = e.clientX;
+      downY = e.clientY;
+      downT = e.timeStamp;
     },
     { passive: true }
   );
-  addEventListener('pointerleave', () => scene.clearHover());
+  addEventListener(
+    'pointerup',
+    (e) => {
+      if (e.pointerType !== 'touch') return;
+      const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+      // echter Tap (kein Scrollen)? -> picken
+      if (moved < 14 && e.timeStamp - downT < 450) {
+        scene.pick(e.clientX, e.clientY);
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => scene.clearHover(), 3200);
+      }
+    },
+    { passive: true }
+  );
 
   gsap.ticker.add(() => {
     if (needPick) {
@@ -151,15 +183,18 @@ function setupHoverCallout(
     }
     const h = scene.getHover();
     if (h) {
+      // Box nach unten klappen, wenn oben kein Platz ist (Handy, Objekt oben)
+      const below = h.y - h.radiusPx * 0.6 - 120 < 8;
+      callout.classList.toggle('is-below', below);
       callout.classList.add('is-on');
       callout.style.left = `${h.x}px`;
-      callout.style.top = `${h.y - h.radiusPx * 0.6}px`;
+      callout.style.top = `${below ? h.y + h.radiusPx * 0.6 : h.y - h.radiusPx * 0.6}px`;
       if (nameEl.textContent !== h.name) nameEl.textContent = h.name;
       if (typeEl.textContent !== h.type) typeEl.textContent = h.type;
-      journey.style.cursor = 'crosshair';
+      if (fineHover) journey.style.cursor = 'crosshair';
     } else {
       callout.classList.remove('is-on');
-      journey.style.cursor = '';
+      if (fineHover) journey.style.cursor = '';
     }
   });
 }

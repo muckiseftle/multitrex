@@ -281,6 +281,21 @@ const fmt = new Intl.NumberFormat('de-DE');
     transform: translateY(0);
   }
 
+  /* nach unten geklappt (Objekt zu weit oben) — Punkt oben, Box unten */
+  .callout.is-below {
+    flex-direction: column-reverse;
+    transform: translate(-50%, 0);
+  }
+  .callout.is-below .callout__box {
+    transform: translateY(-6px);
+  }
+  .callout.is-below.is-on .callout__box {
+    transform: translateY(0);
+  }
+  .callout.is-below .callout__line {
+    background: linear-gradient(rgb(111 227 255 / 0.05), var(--color-accent));
+  }
+
   /* futuristische Ecken-Marker an der Box */
   .callout__corner {
     position: absolute;
@@ -340,6 +355,22 @@ const fmt = new Intl.NumberFormat('de-DE');
     inset: 3px;
     border-radius: 50%;
     background: var(--color-accent);
+  }
+
+  /* Handy: kompaktere Box, kürzere Leitlinie */
+  @media (max-width: 700px) {
+    .callout__box {
+      padding: 0.35rem 0.7rem 0.4rem;
+    }
+    .callout__name {
+      font-size: 0.82rem;
+    }
+    .callout__type {
+      font-size: 0.5rem;
+    }
+    .callout__line {
+      height: 40px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
