@@ -165,6 +165,11 @@ export class SolarScene {
     phase: number;
   }[] = [];
 
+  /** Zusatz-Objekte (Zwergplaneten, Komet-Kern) — hoverbar */
+  private extras: THREE.Mesh[] = [];
+  private belt?: THREE.Points;
+  private comet?: THREE.Group;
+
   /** Hover-Erkennung (Raycasting) für die Namens-Callouts */
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
@@ -199,6 +204,8 @@ export class SolarScene {
     this.buildStars();
     this.queue = this.buildPlanets(tier);
     this.buildMoons(tier);
+    this.buildBeltAndDwarfs(tier);
+    this.buildComet();
   }
 
   /* ---------------- Aufbau ---------------- */
@@ -383,6 +390,125 @@ export class SolarScene {
     });
   }
 
+  /** Asteroidengürtel (Punktwolke zwischen Mars und Jupiter) + Zwergplaneten */
+  private buildBeltAndDwarfs(tier: DeviceTier) {
+    const marsZ = PLANET_VISUALS.find((p) => p.id === 'mars')!.z;
+    const jupZ = PLANET_VISUALS.find((p) => p.id === 'jupiter')!.z;
+    const neptunZ = PLANET_VISUALS.find((p) => p.id === 'neptun')!.z;
+    const beltZ = (marsZ + jupZ) / 2;
+
+    const count = tier === 'high' ? 1500 : 650;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 74;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 2] = beltZ + (Math.random() - 0.5) * 46;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0x9a8064,
+      size: 0.6,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+    });
+    this.belt = new THREE.Points(geo, mat);
+    this.scene.add(this.belt);
+
+    // Zwergplaneten: Ceres (im Gürtel), Pluto (jenseits des Neptun)
+    this.extras.push(this.makeDwarf('Ceres', 0.55, 0x9a8c7a, new THREE.Vector3(7, 2.5, beltZ + 5)));
+    this.extras.push(this.makeDwarf('Pluto', 0.62, 0xcbb39a, new THREE.Vector3(-9, -3, neptunZ - 30)));
+  }
+
+  private makeDwarf(name: string, scale: number, color: number, pos: THREE.Vector3): THREE.Mesh {
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 1, metalness: 0, dithering: true });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), mat);
+    mesh.scale.setScalar(scale);
+    mesh.position.copy(pos);
+    mesh.userData.callout = { name, type: 'Zwergplanet' };
+    this.scene.add(mesh);
+    return mesh;
+  }
+
+  /** Komet mit leuchtendem Kern, Koma und Schweif (weg von der Sonne) */
+  private buildComet() {
+    const satZ = PLANET_VISUALS.find((p) => p.id === 'saturn')!.z;
+    const uraZ = PLANET_VISUALS.find((p) => p.id === 'uranus')!.z;
+    const pos = new THREE.Vector3(-15, 7, (satZ + uraZ) / 2);
+    const group = new THREE.Group();
+    group.position.copy(pos);
+
+    // Kern (hoverbar)
+    const nucleus = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 16, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0xdfeeff,
+        emissive: 0x8fbcff,
+        emissiveIntensity: 0.7,
+        roughness: 1,
+      })
+    );
+    nucleus.scale.setScalar(0.32);
+    nucleus.userData.callout = { name: 'Komet', type: 'Eiskörper' };
+    group.add(nucleus);
+    this.extras.push(nucleus);
+
+    // Koma-Glow
+    const coma = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: makeGlowTexture(),
+        color: 0xaad4ff,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        opacity: 0.75,
+      })
+    );
+    coma.scale.setScalar(3.4);
+    group.add(coma);
+
+    // Schweif als Punktstrom, weg von der Sonne
+    const away = pos.clone().sub(new THREE.Vector3(SUN_POS.x, SUN_POS.y, SUN_POS.z)).normalize();
+    const perpA = new THREE.Vector3().crossVectors(away, new THREE.Vector3(0, 1, 0)).normalize();
+    const perpB = new THREE.Vector3().crossVectors(away, perpA).normalize();
+    const N = 160;
+    const tp = new Float32Array(N * 3);
+    const tailLen = 24;
+    for (let i = 0; i < N; i++) {
+      const t = i / N;
+      const spread = (0.3 + t * 2.6) * (Math.random() * 0.8 + 0.2);
+      const ang = Math.random() * Math.PI * 2;
+      const p = away
+        .clone()
+        .multiplyScalar(t * tailLen)
+        .add(perpA.clone().multiplyScalar(Math.cos(ang) * spread))
+        .add(perpB.clone().multiplyScalar(Math.sin(ang) * spread));
+      tp[i * 3] = p.x;
+      tp[i * 3 + 1] = p.y;
+      tp[i * 3 + 2] = p.z;
+    }
+    const tailGeo = new THREE.BufferGeometry();
+    tailGeo.setAttribute('position', new THREE.BufferAttribute(tp, 3));
+    const tail = new THREE.Points(
+      tailGeo,
+      new THREE.PointsMaterial({
+        color: 0x9fd0ff,
+        size: 1.3,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    group.add(tail);
+
+    this.comet = group;
+    this.scene.add(group);
+  }
+
   private applyTexture(id: string, tex: THREE.Texture) {
     const mesh = this.planets.get(id);
     if (!mesh) return; // Ring/Wolken/Monde werden separat verdrahtet
@@ -477,6 +603,12 @@ export class SolarScene {
       this.clouds.rotation.y = t * 0.02; // Wolken driften relativ zur Erde
     }
 
+    // Asteroidengürtel driftet langsam, Zwergplaneten rotieren
+    if (this.belt) this.belt.rotation.z = t * 0.008;
+    for (const e of this.extras) e.rotation.y = t * 0.08;
+    // Komet: sanftes Schweben + rotierender Kern
+    if (this.comet) this.comet.children[0]!.rotation.y = t * 0.3;
+
     // Monde umkreisen ihren Planeten (nur wenn dieser sichtbar ist)
     for (const o of this.moonOrbits) {
       const vis = this.planets.get(o.parent)?.visible ?? false;
@@ -510,6 +642,7 @@ export class SolarScene {
     const targets: THREE.Object3D[] = [];
     for (const m of this.planets.values()) if (m.visible) targets.push(m);
     for (const o of this.moonOrbits) if (o.pivot.visible) targets.push(o.mesh);
+    for (const e of this.extras) targets.push(e); // Zwergplaneten + Komet immer hoverbar
 
     const hit = this.raycaster.intersectObjects(targets, false)[0];
     this.hoverObject = hit ? hit.object : null;
@@ -517,6 +650,24 @@ export class SolarScene {
 
   clearHover() {
     this.hoverObject = null;
+  }
+
+  /** Nur Dev/Verifikation: Kamera auf Gürtel/Komet richten. */
+  debugFrame(name: string) {
+    if (name === 'belt') {
+      const marsZ = PLANET_VISUALS.find((p) => p.id === 'mars')!.z;
+      const jupZ = PLANET_VISUALS.find((p) => p.id === 'jupiter')!.z;
+      const z = (marsZ + jupZ) / 2;
+      this.camera.position.set(2, 6, z + 36);
+      this.lookTarget.set(0, 0, z);
+    } else if (name === 'comet' && this.comet) {
+      const c = this.comet.position;
+      this.camera.position.set(c.x + 7, c.y + 3, c.z + 17);
+      this.lookTarget.copy(c);
+    }
+    this.setLightFalloff(0.5);
+    this.update();
+    this.update();
   }
 
   /** Nur Dev/Verifikation: Hover auf ein bestimmtes Objekt (Planet/Mond-id) erzwingen. */
@@ -527,7 +678,12 @@ export class SolarScene {
       return;
     }
     const moon = this.moonOrbits.find((o) => (o.mesh.userData.callout?.name as string)?.toLowerCase() === id);
-    this.hoverObject = moon ? moon.mesh : null;
+    if (moon) {
+      this.hoverObject = moon.mesh;
+      return;
+    }
+    const extra = this.extras.find((e) => (e.userData.callout?.name as string)?.toLowerCase() === id);
+    this.hoverObject = extra ?? null;
   }
 
   /**

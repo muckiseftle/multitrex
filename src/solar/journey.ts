@@ -250,10 +250,15 @@ async function init3D(journey: HTMLElement) {
       void scene.queue.load(which);
       const sVal = parseFloat(params.get('s') ?? '0.5');
       const calloutId = params.get('callout');
+      const sc = scene as unknown as {
+        debugFrame: (n: string) => void;
+        debugHover: (id: string) => void;
+      };
       const paint = () => {
-        if (fly) scene.debugPass(fly, sVal);
+        if (fly === 'belt' || fly === 'comet') sc.debugFrame(fly);
+        else if (fly) scene.debugPass(fly, sVal);
         else scene.debugPose(pose!);
-        if (calloutId) (scene as unknown as { debugHover: (id: string) => void }).debugHover(calloutId);
+        if (calloutId) sc.debugHover(calloutId);
         requestAnimationFrame(paint);
       };
       requestAnimationFrame(paint);
