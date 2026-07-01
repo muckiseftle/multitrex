@@ -7,6 +7,7 @@ object: 'M 51'
 constellation: 'Jagdhunde'
 distance: '≈ 28 Mio. Lichtjahre'
 objectType: 'Spiralgalaxie'
+category: 'Galaxien'
 ---
 
 Die Whirlpool-Galaxie ist das Paradebeispiel einer Spiralgalaxie mit perfekt

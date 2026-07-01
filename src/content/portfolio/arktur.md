@@ -7,6 +7,7 @@ object: 'α Bootis'
 constellation: 'Bärenhüter'
 distance: '≈ 37 Lichtjahre'
 objectType: 'Roter Riese'
+category: 'Sterne'
 ---
 
 Arktur ist der hellste Stern des nördlichen Sternenhimmels — ein Roter Riese

@@ -7,6 +7,7 @@ object: 'M 65 · M 66 · NGC 3628'
 constellation: 'Löwe'
 distance: '≈ 35 Mio. Lichtjahre'
 objectType: 'Galaxiengruppe'
+category: 'Galaxien'
 featured: true
 ---
 

@@ -6,12 +6,34 @@ import GalleryCard from '../../components/GalleryCard.astro';
 const entries = (await getCollection('portfolio')).sort(
   (a, b) => a.data.order - b.data.order
 );
-const [lead, ...rest] = entries;
+
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL;
+const siteUrl = (Astro.site?.toString() ?? 'https://astrofotografie-allgaeu.de/').replace(/\/$/, '');
+
+// Kategorien in fester Reihenfolge — nur solche anzeigen, zu denen es Bilder gibt
+const CATEGORY_ORDER = ['Galaxien', 'Nebel', 'Mond & Planeten', 'Sterne', 'Sonstiges'];
+const categories = CATEGORY_ORDER.filter((c) => entries.some((e) => e.data.category === c));
+
+// ItemList: signalisiert Google die Galerie-Struktur und verlinkt jedes Foto
+const jsonLd = {
+  '@type': 'CollectionPage',
+  name: 'Astrofotografie-Portfolio aus dem Allgäu',
+  mainEntity: {
+    '@type': 'ItemList',
+    itemListElement: entries.map((entry, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${siteUrl}${base}/portfolio/${entry.id}/`,
+      name: entry.data.title,
+    })),
+  },
+};
 ---
 
 <Base
-  title="Portfolio — Multitrex Astrofotografie"
+  title="Astrofotografie-Portfolio aus dem Allgäu | Multitrex"
   description="Astrofotografien aus dem Allgäu: Orionnebel, Leo-Triplett, Whirlpool-Galaxie, Mineralmond und mehr — aufgenommen von Merlin Gail."
+  jsonLd={jsonLd}
 >
   <section class="gallery container">
     <header class="gallery__head reveal">
@@ -24,17 +46,28 @@ const [lead, ...rest] = entries;
       </p>
     </header>
 
-    {lead && (
-      <div class="gallery__lead-card">
-        <GalleryCard entry={lead} wide loading="eager" />
+    {categories.length > 1 && (
+      <div class="gallery__filter" role="group" aria-label="Nach Kategorie filtern">
+        <button type="button" class="chip is-active" data-filter="all" aria-pressed="true">
+          Alle
+        </button>
+        {categories.map((c) => (
+          <button type="button" class="chip" data-filter={c} aria-pressed="false">
+            {c}
+          </button>
+        ))}
       </div>
     )}
 
-    <div class="gallery__grid">
-      {rest.map((entry) => (
-        <GalleryCard entry={entry} />
+    <ul class="gallery__grid" id="gallery-grid">
+      {entries.map((entry, i) => (
+        <li class="gallery__item" data-category={entry.data.category}>
+          <GalleryCard entry={entry} loading={i < 2 ? 'eager' : 'lazy'} />
+        </li>
       ))}
-    </div>
+    </ul>
+
+    <p class="gallery__empty label" hidden>Keine Aufnahmen in dieser Kategorie.</p>
   </section>
 </Base>
 
@@ -45,7 +78,7 @@ const [lead, ...rest] = entries;
 
   .gallery__head {
     max-width: 60ch;
-    margin-bottom: var(--space-6);
+    margin-bottom: var(--space-5);
   }
 
   .gallery__head h1 {
@@ -56,13 +89,102 @@ const [lead, ...rest] = entries;
     color: var(--color-star-400);
   }
 
-  .gallery__lead-card {
-    margin-bottom: var(--space-4);
+  .gallery__filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--color-star-400);
+    background: transparent;
+    border: var(--border-fine);
+    border-radius: 999px;
+    padding: 0.5em 1.1em;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+
+  .chip:hover {
+    color: var(--color-star-100);
+    border-color: var(--color-accent-dim);
+  }
+
+  .chip.is-active {
+    color: var(--color-space-950);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
   }
 
   .gallery__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-4);
   }
+
+  .gallery__item {
+    margin: 0;
+  }
+
+  .gallery__item[hidden] {
+    display: none;
+  }
+
+  .gallery__empty {
+    margin-top: var(--space-4);
+  }
+
+  @media (max-width: 900px) {
+    .gallery__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .gallery__grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
+
+<script>
+  const grid = document.getElementById('gallery-grid');
+  const chips = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('.gallery__filter .chip')
+  );
+  const empty = document.querySelector<HTMLElement>('.gallery__empty');
+
+  if (grid && chips.length) {
+    const items = Array.from(grid.querySelectorAll<HTMLElement>('.gallery__item'));
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const filter = chip.dataset.filter;
+        chips.forEach((c) => {
+          const active = c === chip;
+          c.classList.toggle('is-active', active);
+          c.setAttribute('aria-pressed', String(active));
+        });
+
+        let visible = 0;
+        items.forEach((item) => {
+          const show = filter === 'all' || item.dataset.category === filter;
+          item.hidden = !show;
+          if (show) visible += 1;
+        });
+        if (empty) empty.hidden = visible !== 0;
+      });
+    });
+  }
+</script>

@@ -20,6 +20,14 @@ const portfolio = defineCollection({
       distance: z.string().optional(), // z.B. "1.344 Lj"
       objectType: z.string().optional(), // z.B. "Emissionsnebel"
       captureDate: z.string().optional(),
+      /** Oberkategorie für Gruppierung/Filter im Portfolio */
+      category: z
+        .enum(['Galaxien', 'Nebel', 'Mond & Planeten', 'Sterne', 'Sonstiges'])
+        .default('Sonstiges'),
+      /** Aufnahme-Daten (optional, vom Betreiber zu pflegen) */
+      integration: z.string().optional(), // Gesamtbelichtung, z.B. "4 h 20 min"
+      frames: z.string().optional(), // Einzelbilder, z.B. "260 × 60 s"
+      gear: z.string().optional(), // Setup, z.B. "Newton 200/1000 · EQ6 · D7500"
       featured: z.boolean().default(false),
     }),
 });
