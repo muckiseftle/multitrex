@@ -165,6 +165,13 @@ export class SolarScene {
     phase: number;
   }[] = [];
 
+  /** Hover-Erkennung (Raycasting) für die Namens-Callouts */
+  private raycaster = new THREE.Raycaster();
+  private pointer = new THREE.Vector2();
+  private hoverObject: THREE.Object3D | null = null;
+  private tmpVec = new THREE.Vector3();
+  private tmpRight = new THREE.Vector3();
+
   constructor(canvas: HTMLCanvasElement, tier: DeviceTier) {
     this.tier = tier;
 
@@ -303,6 +310,7 @@ export class SolarScene {
       const mesh = new THREE.Mesh(sphere, mat);
       mesh.position.set(v.x, 0, v.z);
       mesh.scale.setScalar(v.scale);
+      mesh.userData.callout = { name: v.name, type: 'Planet' };
       mesh.visible = false; // Sichtbarkeit verwaltet die Timeline (max. 2 gleichzeitig)
       // Achsneigung für natürlicheren Look
       mesh.rotation.z = THREE.MathUtils.degToRad(v.id === 'uranus' ? 82 : 12);
@@ -411,6 +419,7 @@ export class SolarScene {
       mesh.scale.setScalar(radius);
       mesh.position.set(orbitDist, 0, 0);
       mesh.rotation.z = THREE.MathUtils.degToRad(8);
+      mesh.userData.callout = { name: def.name, type: 'Mond' };
 
       // Pivot am Planetenzentrum, um die Neigungsachse gekippt
       const pivot = new THREE.Object3D();
@@ -485,6 +494,71 @@ export class SolarScene {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
+  }
+
+  /* ---------------- Hover / Namens-Callout ---------------- */
+
+  /** Aktualisiert das gehoverte Objekt per Raycasting (Bildschirmkoordinaten). */
+  pick(clientX: number, clientY: number) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+
+    // nur sichtbare Planeten + Monde als Ziele (spart Arbeit, verhindert Treffer
+    // auf gerade unsichtbare Objekte)
+    const targets: THREE.Object3D[] = [];
+    for (const m of this.planets.values()) if (m.visible) targets.push(m);
+    for (const o of this.moonOrbits) if (o.pivot.visible) targets.push(o.mesh);
+
+    const hit = this.raycaster.intersectObjects(targets, false)[0];
+    this.hoverObject = hit ? hit.object : null;
+  }
+
+  clearHover() {
+    this.hoverObject = null;
+  }
+
+  /** Nur Dev/Verifikation: Hover auf ein bestimmtes Objekt (Planet/Mond-id) erzwingen. */
+  debugHover(id: string) {
+    const planet = this.planets.get(id);
+    if (planet) {
+      this.hoverObject = planet;
+      return;
+    }
+    const moon = this.moonOrbits.find((o) => (o.mesh.userData.callout?.name as string)?.toLowerCase() === id);
+    this.hoverObject = moon ? moon.mesh : null;
+  }
+
+  /**
+   * Bildschirmposition + Daten des gehoverten Objekts (oder null).
+   * radiusPx = ungefährer Bildschirmradius, damit die Leitlinie am oberen
+   * Rand des Objekts andockt statt in der Mitte.
+   */
+  getHover(): { name: string; type: string; x: number; y: number; radiusPx: number } | null {
+    const obj = this.hoverObject as THREE.Mesh | null;
+    if (!obj || !obj.visible) return null;
+    const data = obj.userData.callout as { name: string; type: string } | undefined;
+    if (!data) return null;
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const center = obj.getWorldPosition(this.tmpVec).clone();
+    const ndc = center.clone().project(this.camera);
+    if (ndc.z > 1) return null; // hinter der Kamera
+
+    // Bildschirmradius: Randpunkt = Zentrum + Weltradius * KameraRechts
+    const worldR = (obj.geometry as THREE.SphereGeometry).parameters.radius * obj.scale.x;
+    this.tmpRight.setFromMatrixColumn(this.camera.matrixWorld, 0).multiplyScalar(worldR);
+    const edge = center.add(this.tmpRight).project(this.camera);
+    const radiusPx = (Math.abs(edge.x - ndc.x) / 2) * rect.width;
+
+    return {
+      name: data.name,
+      type: data.type,
+      x: rect.left + ((ndc.x + 1) / 2) * rect.width,
+      y: rect.top + ((1 - ndc.y) / 2) * rect.height,
+      radiusPx,
+    };
   }
 
   /** Nur Dev/Verifikation: Kamera direkt in die Vorbeiflug-Pose eines Planeten. */

@@ -2,6 +2,7 @@ import planetsJson from '../content/planets/planets.json';
 
 export type PlanetVisual = {
   id: string;
+  name: string;
   tint: string;
   /** Skalierung in Szenen-Einheiten (perzeptuell gestaucht, nicht maßstabsgetreu) */
   scale: number;
@@ -54,6 +55,7 @@ export const PLANET_VISUALS: PlanetVisual[] = JOURNEY_ORDER.map((id, i) => {
   const viewDist = Math.max(5.5, scale * K);
   return {
     id,
+    name: data.name,
     tint: data.tint,
     scale,
     x: (i % 2 === 0 ? 1 : -1) * SIDE_OFFSET,

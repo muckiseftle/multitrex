@@ -114,6 +114,56 @@ function initOverlays() {
   }
 }
 
+/* ---------------- Hover-Callout: Name mit Leitlinie ---------------- */
+
+function setupHoverCallout(
+  scene: { pick: (x: number, y: number) => void; clearHover: () => void; getHover: () => { name: string; type: string; x: number; y: number; radiusPx: number } | null },
+  journey: HTMLElement
+) {
+  const callout = document.getElementById('planet-callout');
+  const nameEl = callout?.querySelector<HTMLElement>('[data-callout-name]');
+  const typeEl = callout?.querySelector<HTMLElement>('[data-callout-type]');
+  if (!callout || !nameEl || !typeEl) return;
+
+  // Touch-Geräte haben kein echtes Hover -> Feature nur für Maus/Stift
+  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+  let px = 0;
+  let py = 0;
+  let needPick = false;
+
+  addEventListener(
+    'pointermove',
+    (e) => {
+      if (e.pointerType === 'touch') return;
+      px = e.clientX;
+      py = e.clientY;
+      needPick = true;
+    },
+    { passive: true }
+  );
+  addEventListener('pointerleave', () => scene.clearHover());
+
+  gsap.ticker.add(() => {
+    if (needPick) {
+      scene.pick(px, py);
+      needPick = false;
+    }
+    const h = scene.getHover();
+    if (h) {
+      callout.classList.add('is-on');
+      callout.style.left = `${h.x}px`;
+      callout.style.top = `${h.y - h.radiusPx * 0.6}px`;
+      if (nameEl.textContent !== h.name) nameEl.textContent = h.name;
+      if (typeEl.textContent !== h.type) typeEl.textContent = h.type;
+      journey.style.cursor = 'crosshair';
+    } else {
+      callout.classList.remove('is-on');
+      journey.style.cursor = '';
+    }
+  });
+}
+
 /* ---------------- 3D-Szene: lazy, blockiert nie das LCP ---------------- */
 
 async function init3D(journey: HTMLElement) {
@@ -149,6 +199,9 @@ async function init3D(journey: HTMLElement) {
   /* Render-Loop über den GSAP-Ticker (pausiert automatisch bei verstecktem Tab) */
   gsap.ticker.add(() => scene.update());
 
+  /* Hover-Callout: Name von Planet/Mond in einer HUD-Box mit Leitlinie */
+  setupHoverCallout(scene, journey);
+
   /* Dev-Verifikation: ?pose=mars (Disc) oder ?fly=mars&s=0.5 (Tiefflug) */
   if (import.meta.env.DEV) {
     const params = new URLSearchParams(location.search);
@@ -161,9 +214,11 @@ async function init3D(journey: HTMLElement) {
       stage.setAttribute('data-3d-ready', '');
       void scene.queue.load(which);
       const sVal = parseFloat(params.get('s') ?? '0.5');
+      const calloutId = params.get('callout');
       const paint = () => {
         if (fly) scene.debugPass(fly, sVal);
         else scene.debugPose(pose!);
+        if (calloutId) (scene as unknown as { debugHover: (id: string) => void }).debugHover(calloutId);
         requestAnimationFrame(paint);
       };
       requestAnimationFrame(paint);

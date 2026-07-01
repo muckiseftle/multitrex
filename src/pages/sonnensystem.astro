@@ -55,6 +55,18 @@ const fmt = new Intl.NumberFormat('de-DE');
       }
     </nav>
 
+    <!-- Namens-Callout beim Hovern über Planet/Mond (per JS positioniert) -->
+    <div class="callout" id="planet-callout" aria-hidden="true">
+      <div class="callout__box">
+        <span class="callout__corner callout__corner--tl"></span>
+        <span class="callout__corner callout__corner--br"></span>
+        <span class="callout__type" data-callout-type></span>
+        <span class="callout__name" data-callout-name></span>
+      </div>
+      <span class="callout__line"></span>
+      <span class="callout__dot"></span>
+    </div>
+
     <!-- ============ SEKTION: SONNE (Hero / LCP) ============ -->
     <section class="sec sec--sun" id="sonne" data-body="sonne">
       <div class="sec__inner container">
@@ -227,6 +239,114 @@ const fmt = new Intl.NumberFormat('de-DE');
 
   .stage[data-3d-ready] .stage__glow {
     opacity: 0;
+  }
+
+  /* ---------- Hover-Callout (Planet/Mond-Name) ---------- */
+  .callout {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 120;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translate(-50%, -100%);
+    opacity: 0;
+    transition: opacity 0.16s var(--ease-out);
+    font-family: var(--font-mono);
+    will-change: left, top, opacity;
+  }
+
+  .callout.is-on {
+    opacity: 1;
+  }
+
+  .callout__box {
+    position: relative;
+    background: rgb(5 7 15 / 0.82);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.85rem 0.45rem;
+    box-shadow: var(--glow-accent);
+    white-space: nowrap;
+    text-align: center;
+    transform: translateY(6px);
+    transition: transform 0.22s var(--ease-out);
+  }
+
+  .callout.is-on .callout__box {
+    transform: translateY(0);
+  }
+
+  /* futuristische Ecken-Marker an der Box */
+  .callout__corner {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border: solid var(--color-accent);
+    border-width: 0;
+  }
+  .callout__corner--tl {
+    top: -1px;
+    left: -1px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+  }
+  .callout__corner--br {
+    bottom: -1px;
+    right: -1px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+  }
+
+  .callout__type {
+    display: block;
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+
+  .callout__name {
+    display: block;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-star-100);
+    margin-top: 1px;
+  }
+
+  .callout__line {
+    width: 1px;
+    height: 54px;
+    background: linear-gradient(var(--color-accent), rgb(111 227 255 / 0.05));
+  }
+
+  .callout__dot {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    margin-top: -1px;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    box-shadow: var(--glow-accent);
+  }
+  .callout__dot::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .callout,
+    .callout__box {
+      transition: none;
+    }
   }
 
   /* ---------- Sprungleiste ---------- */
