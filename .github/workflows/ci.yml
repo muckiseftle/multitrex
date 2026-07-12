@@ -31,5 +31,8 @@ jobs:
       - name: Abhängigkeiten installieren (sauber aus dem Lockfile)
         run: npm ci
 
+      - name: Tests (Golden-Ephemeriden gegen JPL Horizons + Sensor-Mathematik)
+        run: npm test
+
       - name: Statisch bauen (validiert auch Inhalte & Typen)
         run: npm run build

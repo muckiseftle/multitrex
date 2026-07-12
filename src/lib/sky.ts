@@ -224,6 +224,42 @@ function moonLatitude(d: number): number {
   return 5.128 * Math.sin(F);
 }
 
+/** Entfernung Erde–Mond in km (Niedrigpräzision, Meeus) */
+function moonDistanceKm(d: number): number {
+  const M = (134.963 + 13.064993 * d) * DEG;
+  const D = (297.8502 + 12.19074912 * d) * DEG;
+  return (
+    385000.56 -
+    20905.355 * Math.cos(M) -
+    3699.111 * Math.cos(2 * D - M) -
+    2955.968 * Math.cos(2 * D) -
+    569.925 * Math.cos(2 * M)
+  );
+}
+
+/**
+ * Atmosphärische Refraktion (Bennett) in Grad für eine scheinbare Höhe.
+ * Hebt Objekte nahe dem Horizont um bis zu ~0,5° an; oberhalb ~15° vernachlässigbar.
+ */
+function refractionDeg(altDeg: number): number {
+  if (altDeg < -1) return 0;
+  const h = Math.max(altDeg, -1);
+  return 1.02 / Math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60;
+}
+
+/**
+ * Magnetische Deklination (Grad, + = Ost) — regionale Näherung für Europa
+ * (~45–56° N, 0–20° O), linear in Länge + Säkulardrift, Epoche 2026,
+ * Genauigkeit ~±0,5° in DACH. Außerhalb der Region: 0 (Kalibrierung im
+ * Scanner gleicht Restfehler aus).
+ */
+export function magneticDeclinationDeg(latDeg: number, lonDeg: number, date = new Date()): number {
+  if (latDeg < 40 || latDeg > 60 || lonDeg < -5 || lonDeg > 25) return 0;
+  const years = (date.getTime() - Date.UTC(2026, 0, 1)) / (365.25 * 86400000);
+  // Stützwerte WMM 2026: Zürich (8.5°O) +3.3°, Kempten (10.3°O) +3.7°, Wien (16.4°O) +5.2°
+  return 3.3 + 0.24 * (lonDeg - 8.5) + 0.16 * years;
+}
+
 /** Ekliptik (Länge/Breite) -> Äquator (Rektaszension/Deklination), Grad */
 function eclToEqu(lonDeg: number, latDeg: number): { ra: number; dec: number } {
   const l = lonDeg * DEG;
@@ -261,8 +297,18 @@ function equToHoriz(raDeg: number, decDeg: number, latDeg: number, lonDeg: numbe
 
 export type SkyBody = { id: string; name: string; alt: number; az: number };
 
-/** Höhe/Azimut von Sonne, Mond und den 5 hellen Planeten für Ort + Zeit */
-export function horizontalPositions(date: Date, latDeg: number, lonDeg: number): SkyBody[] {
+/**
+ * Höhe/Azimut von Sonne, Mond und den 5 hellen Planeten für Ort + Zeit.
+ * Mond topozentrisch (Parallaxe bis ~1° korrigiert). `refraction: true`
+ * hebt zusätzlich horizontnahe Objekte um die atmosphärische Refraktion an
+ * (fürs Kamera-Overlay; Vergleiche mit Ephemeriden bleiben ohne).
+ */
+export function horizontalPositions(
+  date: Date,
+  latDeg: number,
+  lonDeg: number,
+  opts: { refraction?: boolean } = {}
+): SkyBody[] {
   const d = daysSinceJ2000(date);
   const T = d / 36525;
   const earth = PLANETS.find((p) => p.id === 'erde')!;
@@ -277,11 +323,15 @@ export function horizontalPositions(date: Date, latDeg: number, lonDeg: number):
     const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
     out.push({ id: 'sonne', name: 'Sonne', alt: h.alt, az: h.az });
   }
-  // Mond
+  // Mond — geozentrisch rechnen, dann topozentrische Parallaxe:
+  // sie wirkt entlang des Höhenkreises und senkt die Höhe um p·cos(alt)
+  // (p = Horizontalparallaxe, ~0,95° in mittlerer Entfernung).
   {
     const { ra, dec } = eclToEqu(moonLongitude(d), moonLatitude(d));
     const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
-    out.push({ id: 'mond', name: 'Mond', alt: h.alt, az: h.az });
+    const parallax = Math.asin(6378.14 / moonDistanceKm(d)) / DEG;
+    const alt = h.alt - parallax * Math.cos(h.alt * DEG);
+    out.push({ id: 'mond', name: 'Mond', alt, az: h.az });
   }
   // Planeten
   for (const p of PLANETS) {
@@ -296,5 +346,7 @@ export function horizontalPositions(date: Date, latDeg: number, lonDeg: number):
     const h = equToHoriz(ra, dec, latDeg, lonDeg, date);
     out.push({ id: p.id, name: p.name, alt: h.alt, az: h.az });
   }
+
+  if (opts.refraction) for (const b of out) b.alt += refractionDeg(b.alt);
   return out;
 }

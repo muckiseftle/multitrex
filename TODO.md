@@ -18,6 +18,21 @@ strukturierte Daten/Schema.org, keyword-optimierte Titel). Was noch fehlt, ist
 - [ ] „Über mich"-Text persönlich machen (seit wann? wie zum Hobby gekommen?
       genaue Teleskop-Daten) — Platzhalter in `src/pages/ueber-mich.astro`.
 
+## AR-Himmelsscanner: Feld-Test nach dem Genauigkeits-Update
+
+Die Rechenschicht ist gegen JPL Horizons verifiziert (npm test). Was nur am
+echten Gerät prüfbar ist — am besten tagsüber mit der Sonne als Maßstab:
+
+- [ ] **iPhone**: Scanner öffnen, Kamera zur Sonne heben → Sonnen-Marker muss
+      auf/nahe der echten Sonne sitzen (vorher: bis 180° daneben, Fix B1).
+- [ ] **Android**: dito; falls konstant einige Grad daneben → einmal
+      „◎ An Sonne/Mond ausrichten" tippen (Kompass-Kalibrierfehler).
+- [ ] **Rand-Genauigkeit**: Sonne an den Bildrand schwenken — Marker soll auf
+      der Sonne bleiben (FOV-Fix B4; vorher wanderte er zum Rand hin weg).
+- [ ] **Debug bei Problemen**: 5× auf die Kompass-Pille (oben links) tippen →
+      Anzeige von Quelle/Blickrichtung/Missweisung/FOV. Werte notieren.
+- [ ] Nachts: Mond & sichtbare Planeten gegenprüfen.
+
 ## Design / UX (in Diskussion)
 
 Ideen zur Verbesserung des Website-Erlebnisses — Priorisierung offen:
